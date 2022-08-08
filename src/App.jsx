@@ -7,7 +7,6 @@ import {
   AccordionIcon,
   Button,
   ButtonGroup,
-  Box,
   Container,
   Heading,
   Text,
@@ -19,6 +18,13 @@ import FileInput from './components/FileInput'
 import TextInput from './components/TextInput'
 
 function App() {
+  const [textSequences, setTextSequences] = useState('')
+
+  // Set change the stateful variable 
+  const handleTextInput = (event) => {
+    let newValue = event.target.value
+    setTextSequences(newValue)
+  }
 
   return (
     <Container className='App'>
@@ -32,7 +38,7 @@ function App() {
             <AccordionIcon />
           </AccordionButton>
           <AccordionPanel>
-            <TextInput title={'Paste fastq'} />
+            <TextInput title={'Paste fastq'} onChange={handleTextInput}/>
           </AccordionPanel>
         </AccordionItem>
 

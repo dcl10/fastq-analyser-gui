@@ -12,7 +12,7 @@ function TextInput({isInvalid = false, title}) {
       <FormLabel>{title}</FormLabel>
       <Input />
       {
-        formInvalid ? (
+        isInvalid ? (
           <FormErrorMessage>
             Please paste at least one valid fastq record.
           </FormErrorMessage>

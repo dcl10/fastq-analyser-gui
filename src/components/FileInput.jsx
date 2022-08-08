@@ -12,7 +12,7 @@ function FileInput({isInvalid = false, title}) {
       <FormLabel>{title}</FormLabel>
       <Input type='file' />
       {
-        formInvalid ? (
+        isInvalid ? (
           <FormErrorMessage>
             Please select a valid file.
           </FormErrorMessage>

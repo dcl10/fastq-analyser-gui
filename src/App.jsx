@@ -19,11 +19,18 @@ import TextInput from './components/TextInput'
 
 function App() {
   const [textSequences, setTextSequences] = useState('')
+  const [fileSequences, setFileSequences] = useState()
 
-  // Set change the stateful variable 
+  // Change the text sequences in state 
   const handleTextInput = (event) => {
     let newValue = event.target.value
     setTextSequences(newValue)
+  }
+
+  // Change the file sequences in state
+  const handleFileInput = (event) => {
+    let newValue = event.target.files[0]
+    setFileSequences(newValue)
   }
 
   return (
@@ -49,7 +56,7 @@ function App() {
             <AccordionIcon />
           </AccordionButton>
           <AccordionPanel>
-            <FileInput title={'Upload Fastq file'}/>
+            <FileInput title={'Upload Fastq file'} onChange={handleFileInput} />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>

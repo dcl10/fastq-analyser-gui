@@ -20,6 +20,7 @@ import TextInput from './components/TextInput'
 function App() {
   const [textSequences, setTextSequences] = useState('')
   const [fileSequences, setFileSequences] = useState()
+  const [results, setResults] = useState({})
 
   // Change the text sequences in state 
   const handleTextInput = (event) => {
@@ -42,6 +43,12 @@ function App() {
     let fileInput = document.getElementById('file-input')
     fileInput.value = ''
     setFileSequences(undefined)
+  }
+
+  // Send the text sequences to the backend and return the analytics
+  const analyseSequences = async () => {
+    let results = await invoke('analyse_sequences', {sequences: textSequences})
+    setResults(results)
   }
 
   return (
@@ -75,7 +82,12 @@ function App() {
       {/* Control buttons */}
       <Center>
         <ButtonGroup spacing={4}>
-          <Button colorScheme='blue'>Submit</Button>
+          <Button
+            colorScheme='blue'
+            onClick={analyseSequences}
+          >
+            Submit
+          </Button>
           <Button
             variant='outline'
             colorScheme='red'

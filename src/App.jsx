@@ -48,7 +48,7 @@ function App() {
     <Container className='App'>
       <Heading>Fastq Analyser</Heading>
       {/* The input options */}
-      <Accordion>
+      <Accordion allowMultiple allowToggle>
         <AccordionItem>
           <AccordionButton>
             <Text>Input Text</Text>
@@ -60,7 +60,7 @@ function App() {
           </AccordionPanel>
         </AccordionItem>
 
-        <AccordionItem>
+        <AccordionItem isDisabled>
           <AccordionButton>
             <Text>Input File</Text>
             <Spacer />

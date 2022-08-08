@@ -33,6 +33,17 @@ function App() {
     setFileSequences(newValue)
   }
 
+  // Clear the input fields and reset the state
+  const clearInputs = () => {
+    let textInput = document.getElementById('text-input')
+    textInput.value = ''
+    setTextSequences('')
+
+    let fileInput = document.getElementById('file-input')
+    fileInput.value = ''
+    setFileSequences(undefined)
+  }
+
   return (
     <Container className='App'>
       <Heading>Fastq Analyser</Heading>
@@ -45,7 +56,7 @@ function App() {
             <AccordionIcon />
           </AccordionButton>
           <AccordionPanel>
-            <TextInput title={'Paste fastq'} onChange={handleTextInput}/>
+            <TextInput id='text-input' title={'Paste fastq'} onChange={handleTextInput}/>
           </AccordionPanel>
         </AccordionItem>
 
@@ -56,7 +67,7 @@ function App() {
             <AccordionIcon />
           </AccordionButton>
           <AccordionPanel>
-            <FileInput title={'Upload Fastq file'} onChange={handleFileInput} />
+            <FileInput id='file-input' title={'Upload Fastq file'} onChange={handleFileInput} />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>
@@ -65,7 +76,13 @@ function App() {
       <Center>
         <ButtonGroup spacing={4}>
           <Button colorScheme='blue'>Submit</Button>
-          <Button variant='outline' colorScheme='red'>Clear</Button>
+          <Button
+            variant='outline'
+            colorScheme='red'
+            onClick={clearInputs}
+          >
+            Clear
+          </Button>
         </ButtonGroup>
       </Center>
     </Container>

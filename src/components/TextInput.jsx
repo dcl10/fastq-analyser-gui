@@ -2,15 +2,15 @@ import {
   FormControl,
   FormLabel,
   FormErrorMessage,
-  FormHelperText,
   Textarea,
 } from '@chakra-ui/react'
 
-function TextInput({isInvalid = false, title, onChange}) {
+function TextInput({isInvalid = false, title, onChange, id}) {
   return (
     <FormControl isInvalid={isInvalid}>
       <FormLabel>{title}</FormLabel>
-      <Textarea 
+      <Textarea
+        id={id}
         placeholder='Paste one or more fastq records.'
         onChange={onChange}
       />

@@ -6,11 +6,11 @@ import {
   Input
 } from '@chakra-ui/react'
 
-function FileInput({isInvalid = false, title, onChange}) {
+function FileInput({isInvalid = false, title, onChange, id}) {
   return (
     <FormControl isInvalid={isInvalid}>
       <FormLabel>{title}</FormLabel>
-      <Input type='file' onChange={onChange} />
+      <Input type='file' onChange={onChange} id={id} />
       {
         isInvalid ? (
           <FormErrorMessage>

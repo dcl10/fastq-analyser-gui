@@ -1,44 +1,102 @@
 import { useState } from 'react'
 import { 
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
   Button,
+  ButtonGroup,
   Container,
   Heading,
-  HStack,
-  Input,
   Text,
+  Spacer,
+  Center,
 } from '@chakra-ui/react'
 import { invoke } from '@tauri-apps/api'
+import FileInput from './components/FileInput'
+import TextInput from './components/TextInput'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [textSequences, setTextSequences] = useState('')
+  const [fileSequences, setFileSequences] = useState()
+  const [results, setResults] = useState({})
 
-  /**
-   * A slightly contrived way to increase the count
-   * to show how to invoke Rust commands from the frontend
-   */
-  const rustIncrease = async () => {
-    let newNumber = await invoke('increase', {num: count})
-    setCount(newNumber)
+  // Change the text sequences in state 
+  const handleTextInput = (event) => {
+    let newValue = event.target.value
+    setTextSequences(newValue)
   }
 
-  /**
-   * A slightly contrived way to decrease the count
-   * to show how to invoke Rust commands from the frontend
-   */
-  const rustDecrease = async () => {
-    let newNumber = await invoke('decrease', {num: count})
-    setCount(newNumber)
+  // Change the file sequences in state
+  const handleFileInput = (event) => {
+    let newValue = event.target.files[0]
+    setFileSequences(newValue)
+  }
+
+  // Clear the input fields and reset the state
+  const clearInputs = () => {
+    let textInput = document.getElementById('text-input')
+    textInput.value = ''
+    setTextSequences('')
+
+    let fileInput = document.getElementById('file-input')
+    fileInput.value = ''
+    setFileSequences(undefined)
+  }
+
+  // Send the text sequences to the backend and return the analytics
+  const analyseSequences = async () => {
+    let results = await invoke('analyse_sequences', {sequences: textSequences})
+    setResults(results)
   }
 
   return (
     <Container className='App'>
-      <Heading>This is a template Tauri app.</Heading>
-      <Text>It combines a fast and safe Rust backend with a React frontend.</Text>
-      <HStack>
-        <Button onClick={rustDecrease}>-</Button>
-        <Input value={count} isReadOnly />
-        <Button onClick={rustIncrease}>+</Button>
-      </HStack>
+      <Heading>Fastq Analyser</Heading>
+      {/* The input options */}
+      <Accordion allowMultiple allowToggle>
+        <AccordionItem>
+          <AccordionButton>
+            <Text>Input Text</Text>
+            <Spacer />
+            <AccordionIcon />
+          </AccordionButton>
+          <AccordionPanel>
+            <TextInput id='text-input' title={'Paste fastq'} onChange={handleTextInput}/>
+          </AccordionPanel>
+        </AccordionItem>
+
+        <AccordionItem isDisabled>
+          <AccordionButton>
+            <Text>Input File</Text>
+            <Spacer />
+            <AccordionIcon />
+          </AccordionButton>
+          <AccordionPanel>
+            <FileInput id='file-input' title={'Upload Fastq file'} onChange={handleFileInput} />
+          </AccordionPanel>
+        </AccordionItem>
+      </Accordion>
+
+      {/* Control buttons */}
+      <Center>
+        <ButtonGroup spacing={4}>
+          <Button
+            colorScheme='blue'
+            onClick={analyseSequences}
+          >
+            Submit
+          </Button>
+          <Button
+            variant='outline'
+            colorScheme='red'
+            onClick={clearInputs}
+          >
+            Clear
+          </Button>
+        </ButtonGroup>
+      </Center>
     </Container>
   )
 }

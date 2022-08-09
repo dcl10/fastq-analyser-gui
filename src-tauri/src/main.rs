@@ -7,7 +7,7 @@ mod analysis;
 
 fn main() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![increase, decrease])
+    .invoke_handler(tauri::generate_handler![analysis::analyse_sequences])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

@@ -17,7 +17,7 @@ pub struct SeqResult {
 pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
   let mut results = Vec::new();
   let reader = fastq::Reader::new(sequences.as_bytes());
-  let records = reader.records().map(|rec| rec.unwrap());
+  let records = reader.records().map(|rec| rec.unwrap_or_default());
 
   // Hyperparameters for finding open reading frames (ORFs).
   // NB: DNA alphabet
@@ -28,17 +28,27 @@ pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
 
   // Iterate over results and find GC content and ORFs
   for rec in records {
-    let gc_ = gc::gc_content(rec.seq());
-    let n_orfs = finder.find_all(rec.seq()).count();
-    results.push(
-      SeqResult {
-        n_orfs,
-        id: rec.id().to_owned(),
-        desc: rec.desc().unwrap_or("").to_owned(),
-        gc: gc_,
-        is_valid: rec.check().is_ok()
-      }
-    );
+    if rec.check().is_ok() {
+      let gc_ = gc::gc_content(rec.seq());
+      let n_orfs = finder.find_all(rec.seq()).count();
+      results.push(
+        SeqResult {
+          n_orfs,
+          id: rec.id().to_owned(),
+          desc: rec.desc().unwrap_or("").to_owned(),
+          gc: gc_,
+          is_valid: rec.check().is_ok()
+        }
+      );
+    } else {
+      results.push(
+        SeqResult {
+          id: "Invalid Record".to_owned(),
+          is_valid: rec.check().is_ok(),
+          ..Default::default()
+        }
+      );
+    }
   }
 
   results
@@ -58,17 +68,20 @@ mod tests{
   }
 
   #[test]
-  fn test_invalid_records() {
+  fn test_missing_sequence() {
     let missing_sequence: String = "@id description\n\n+\n!!!!\n".to_owned();
 
     let results = analyse_sequences(missing_sequence);
     assert_eq!(results.len(), 1);
     assert!(!results[0].is_valid);
+  }
 
-    let missing_description: String = "@id \nATAT\n+\n!!!!\n".to_owned();
+  #[test]
+  fn test_missing_quality() {
+    let missing_quality: String = "@id description\nATAT\n+\n\n".to_owned();
 
-    let results = analyse_sequences(missing_description);
+    let results = analyse_sequences(missing_quality);
     assert_eq!(results.len(), 1);
-    assert!(results[0].is_valid);
+    assert!(!results[0].is_valid);
   }
 }

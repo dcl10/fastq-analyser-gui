@@ -34,7 +34,7 @@ pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
       SeqResult {
         n_orfs,
         id: rec.id().to_owned(),
-        desc: rec.desc().unwrap().to_owned(),
+        desc: rec.desc().unwrap_or("").to_owned(),
         gc: gc_,
         is_valid: rec.check().is_ok()
       }
@@ -63,6 +63,12 @@ mod tests{
 
     let results = analyse_sequences(missing_sequence);
     assert_eq!(results.len(), 1);
-    assert!(!results[0].is_valid)
+    assert!(!results[0].is_valid);
+
+    let missing_description: String = "@id \nATAT\n+\n!!!!\n".to_owned();
+
+    let results = analyse_sequences(missing_description);
+    assert_eq!(results.len(), 1);
+    assert!(results[0].is_valid);
   }
 }

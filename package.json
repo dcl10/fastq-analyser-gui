@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "vite": "vite build"
+    "tauri": "tauri"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.2.6",

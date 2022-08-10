@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Default)]
 #[derive(Deserialize, Serialize)]
 pub struct SeqResult {
+  id: String,
+  desc: String,
   gc: f32,
   n_orfs: usize,
   is_valid: bool,
@@ -28,7 +30,15 @@ pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
   for rec in records {
     let gc_ = gc::gc_content(rec.seq());
     let n_orfs = finder.find_all(rec.seq()).count();
-    results.push(SeqResult {gc: gc_, n_orfs, is_valid: rec.check().is_ok()});
+    results.push(
+      SeqResult {
+        n_orfs,
+        id: rec.id().to_owned(),
+        desc: rec.desc().unwrap().to_owned(),
+        gc: gc_,
+        is_valid: rec.check().is_ok()
+      }
+    );
   }
 
   results

@@ -22,9 +22,7 @@ import TextInput from './components/TextInput'
 
 function App() {
   const textSequences = useRef('')
-  const textIsInvalid = useRef(false)
   const fileSequences = useRef()
-  const fileIsInvalid = useRef(false)
   const [results, setResults] = useState([])
 
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -52,16 +50,9 @@ function App() {
 
   // Send the text sequences to the backend and return the analytics
   const analyseSequences = async () => {
-    let textInput = document.getElementById('text-input')
-    let fileInput = document.getElementById('file-input')
-    if (!textInput.value) textIsInvalid.current = true
-    if (!fileInput.value) fileIsInvalid.current = true
-
-    if (!(textIsInvalid.current && fileIsInvalid.current)) {
-      onOpen()
-      let results = await invoke('analyse_sequences', {sequences: textSequences.current})
-      setResults(results)
-    }
+    onOpen()
+    let results = await invoke('analyse_sequences', {sequences: textSequences.current})
+    setResults(results)
   }
 
   //Clear the results when the modal is closed

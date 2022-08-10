@@ -7,20 +7,25 @@ import {
   AccordionIcon,
   Button,
   ButtonGroup,
+  Center,
   Container,
   Heading,
   Text,
+  useDisclosure,
   Spacer,
-  Center,
 } from '@chakra-ui/react'
 import { invoke } from '@tauri-apps/api'
 import FileInput from './components/FileInput'
+import FQModal from './components/FQModal'
+import LoadingIndicator from './components/LoadingIndicator'
 import TextInput from './components/TextInput'
 
 function App() {
   const [textSequences, setTextSequences] = useState('')
   const [fileSequences, setFileSequences] = useState()
-  const [results, setResults] = useState({})
+  const [results, setResults] = useState([])
+
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
   // Change the text sequences in state 
   const handleTextInput = (event) => {
@@ -49,10 +54,57 @@ function App() {
   const analyseSequences = async () => {
     let results = await invoke('analyse_sequences', {sequences: textSequences})
     setResults(results)
+    onOpen()
   }
 
   return (
     <Container className='App'>
+      {/* Results modal */}
+      <FQModal 
+        title={'Testing modal'}
+        isOpen={isOpen}
+        onClose={onClose}
+      >
+        {results.length > 0 ? (
+            <Accordion allowMultiple allowToggle>
+              {
+                results.map(
+                  result => (
+                    <AccordionItem>
+                      <AccordionButton>
+                        <Heading as='h4' size='md'>
+                          {result.id}
+                        </Heading>
+                        <Spacer />
+                        <AccordionIcon />
+                      </AccordionButton>
+                      <AccordionPanel>
+                        <Text>
+                          <strong>Description:</strong>&nbsp;{result.desc}
+                        </Text>
+                        <Text>
+                          <strong>Record is valid?</strong>&nbsp;{result.is_valid}
+                        </Text>
+                        <Text>
+                          <strong>GC %:</strong>&nbsp;{result.gc * 100}%
+                        </Text>
+                        <Text>
+                          <strong>No.# ORFs:</strong>&nbsp;{result.n_orfs}
+                        </Text>
+                      </AccordionPanel>
+                    </AccordionItem>
+                  )
+                )
+              }
+            </Accordion>
+          ) : (
+            <Center>
+              <LoadingIndicator message={'Loading results...'}/>
+            </Center>
+          )
+        }
+      </FQModal>
+
       <Heading>Fastq Analyser</Heading>
       {/* The input options */}
       <Accordion allowMultiple allowToggle>

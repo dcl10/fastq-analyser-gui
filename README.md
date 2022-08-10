@@ -1,8 +1,8 @@
 # FastQ Analyser
-A desktop app that will analyse FastQ records and display statistics about each one
+A desktop app that will analyse FastQ records and display statistics about each one.
 
 ## Download
-Get FastQ Analyser from **insert link here**
+Get FastQ Analyser from https://github.com/dcl10/fastq-analyser-gui/releases
 
 ## Build from source
 To build this program from source, you will need to install [Node.js](https://nodejs.org/en/download/) and [Rust](https://www.rust-lang.org/tools/install).

@@ -758,6 +758,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastq_analyser"
+version = "0.1.0"
+dependencies = [
+ "bio",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+]
+
+[[package]]
 name = "fastrand"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3241,17 +3252,6 @@ dependencies = [
  "url",
  "walkdir",
  "windows 0.37.0",
-]
-
-[[package]]
-name = "tauri_template"
-version = "0.1.0"
-dependencies = [
- "bio",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
 ]
 
 [[package]]

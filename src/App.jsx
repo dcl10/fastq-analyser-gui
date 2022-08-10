@@ -21,11 +21,9 @@ import LoadingIndicator from './components/LoadingIndicator'
 import TextInput from './components/TextInput'
 
 function App() {
-  console.log('rendering')
   const textSequences = useRef('')
   const fileSequences = useRef()
   const [results, setResults] = useState([])
-  console.log(results)
 
   const { isOpen, onOpen, onClose } = useDisclosure()
 
@@ -61,7 +59,7 @@ function App() {
     <Container className='App'>
       {/* Results modal */}
       <FQModal 
-        title={'Testing modal'}
+        title={'Results'}
         isOpen={isOpen}
         onClose={onClose}
       >

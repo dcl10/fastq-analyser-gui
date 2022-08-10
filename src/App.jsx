@@ -83,7 +83,7 @@ function App() {
                           <strong>Description:</strong>&nbsp;{result.desc}
                         </Text>
                         <Text>
-                          <strong>Record is valid?</strong>&nbsp;{result.is_valid}
+                          <strong>Record is valid?</strong>&nbsp;{result.is_valid ? 'Yes': 'No'}
                         </Text>
                         <Text>
                           <strong>GC %:</strong>&nbsp;{result.gc * 100}%

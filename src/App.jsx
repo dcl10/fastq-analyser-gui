@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import {
+import { useRef, useState } from 'react'
+import { 
   Accordion,
   AccordionItem,
   AccordionButton,
@@ -13,93 +13,93 @@ import {
   Text,
   useDisclosure,
   Spacer,
-} from '@chakra-ui/react';
-import { invoke } from '@tauri-apps/api';
-import FileInput from './components/FileInput';
-import FQModal from './components/FQModal';
-import LoadingIndicator from './components/LoadingIndicator';
-import TextInput from './components/TextInput';
+} from '@chakra-ui/react'
+import { invoke } from '@tauri-apps/api'
+import FileInput from './components/FileInput'
+import FQModal from './components/FQModal'
+import LoadingIndicator from './components/LoadingIndicator'
+import TextInput from './components/TextInput'
 
 function App() {
-  const textSequences = useRef('');
-  const fileSequences = useRef();
-  const [results, setResults] = useState([]);
+  const textSequences = useRef('')
+  const fileSequences = useRef()
+  const [results, setResults] = useState([])
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
-  // Change the text sequences in state
+  // Change the text sequences in state 
   const handleTextInput = (event) => {
-    textSequences.current = event.target.value;
-  };
+    textSequences.current = event.target.value
+  }
 
   // Change the file sequences in state
   const handleFileInput = (event) => {
-    fileSequences.current = event.target.files[0];
-  };
+    fileSequences.current = event.target.files[0]
+  }
 
   // Clear the input fields and reset the state
   const clearInputs = () => {
-    let textInput = document.getElementById('text-input');
-    textInput.value = '';
-    textSequences.current = '';
+    let textInput = document.getElementById('text-input')
+    textInput.value = ''
+    textSequences.current = ''
 
-    let fileInput = document.getElementById('file-input');
-    fileInput.value = '';
-    fileSequences.current = undefined;
-  };
+    let fileInput = document.getElementById('file-input')
+    fileInput.value = ''
+    fileSequences.current = undefined
+  }
 
   // Send the text sequences to the backend and return the analytics
   const analyseSequences = async () => {
-    onOpen();
-    let results = await invoke('analyse_sequences', { sequences: textSequences.current });
-    setResults(results);
-  };
+    onOpen()
+    let results = await invoke('analyse_sequences', {sequences: textSequences.current})
+    setResults(results)
+  }
 
   return (
     <Container className='App'>
       {/* Results modal */}
-      <FQModal
+      <FQModal 
         title={'Results'}
         isOpen={isOpen}
         onClose={onClose}
       >
         {results.length > 0 ? (
-          <Accordion allowMultiple allowToggle>
-            {
-              results.map(
-                result => (
-                  <AccordionItem>
-                    <AccordionButton>
-                      <Heading as='h4' size='md'>
-                        {result.id}
-                      </Heading>
-                      <Spacer />
-                      <AccordionIcon />
-                    </AccordionButton>
-                    <AccordionPanel>
-                      <Text>
-                        <strong>Description:</strong>&nbsp;{result.desc}
-                      </Text>
-                      <Text>
-                        <strong>Record is valid?</strong>&nbsp;{result.is_valid ? 'Yes' : 'No'}
-                      </Text>
-                      <Text>
-                        <strong>GC %:</strong>&nbsp;{result.gc * 100}%
-                      </Text>
-                      <Text>
-                        <strong>No.# ORFs:</strong>&nbsp;{result.n_orfs}
-                      </Text>
-                    </AccordionPanel>
-                  </AccordionItem>
+            <Accordion allowMultiple allowToggle>
+              {
+                results.map(
+                  result => (
+                    <AccordionItem>
+                      <AccordionButton>
+                        <Heading as='h4' size='md'>
+                          {result.id}
+                        </Heading>
+                        <Spacer />
+                        <AccordionIcon />
+                      </AccordionButton>
+                      <AccordionPanel>
+                        <Text>
+                          <strong>Description:</strong>&nbsp;{result.desc}
+                        </Text>
+                        <Text>
+                          <strong>Record is valid?</strong>&nbsp;{result.is_valid ? 'Yes': 'No'}
+                        </Text>
+                        <Text>
+                          <strong>GC %:</strong>&nbsp;{result.gc * 100}%
+                        </Text>
+                        <Text>
+                          <strong>No.# ORFs:</strong>&nbsp;{result.n_orfs}
+                        </Text>
+                      </AccordionPanel>
+                    </AccordionItem>
+                  )
                 )
-              )
-            }
-          </Accordion>
-        ) : (
-          <Center>
-            <LoadingIndicator message={'Loading results...'} />
-          </Center>
-        )
+              }
+            </Accordion>
+          ) : (
+            <Center>
+              <LoadingIndicator message={'Loading results...'}/>
+            </Center>
+          )
         }
       </FQModal>
 
@@ -113,7 +113,7 @@ function App() {
             <AccordionIcon />
           </AccordionButton>
           <AccordionPanel>
-            <TextInput id='text-input' title={'Paste fastq'} onChange={handleTextInput} />
+            <TextInput id='text-input' title={'Paste fastq'} onChange={handleTextInput}/>
           </AccordionPanel>
         </AccordionItem>
 
@@ -148,7 +148,7 @@ function App() {
         </ButtonGroup>
       </Center>
     </Container>
-  );
+  )
 }
 
-export default App;
+export default App

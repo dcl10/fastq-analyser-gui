@@ -1,6 +1,6 @@
 import { HStack, Spinner, Text } from "@chakra-ui/react";
 
-function LoadingIndicator({ message }) {
+function LoadingIndicator ({ message }) {
   return (
     <HStack>
       <Spinner
@@ -12,7 +12,7 @@ function LoadingIndicator({ message }) {
       />
       <Text>{message}</Text>
     </HStack>
-  );
+  )
 }
 
-export default LoadingIndicator;
+export default LoadingIndicator

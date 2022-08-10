@@ -1,11 +1,11 @@
 [package]
-name = "tauri_template"
+name = "fastq_analyser"
 version = "0.1.0"
-description = "A template Tauri App"
+description = "A desktop application that analyses FastQ records."
 authors = ["dcl10"]
 license = "MIT"
 repository = "https://github.com/dcl10/tauri-app-template"
-default-run = "tauri_template"
+default-run = "fastq_analyser"
 edition = "2021"
 rust-version = "1.57"
 

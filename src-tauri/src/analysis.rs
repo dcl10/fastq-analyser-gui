@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct SeqResult {
   gc: f32,
   n_orfs: usize,
+  is_valid: bool,
 }
 
 
@@ -27,7 +28,7 @@ pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
   for rec in records {
     let gc_ = gc::gc_content(rec.seq());
     let n_orfs = finder.find_all(rec.seq()).count();
-    results.push(SeqResult {gc: gc_, n_orfs});
+    results.push(SeqResult {gc: gc_, n_orfs, is_valid: rec.check().is_ok()});
   }
 
   results
@@ -44,5 +45,14 @@ mod tests{
 
     let results = analyse_sequences(fqs_str);
     assert_eq!(results.len(), 2);
+  }
+
+  #[test]
+  fn test_invalid_records() {
+    let missing_sequence: String = "@id description\n\n+\n!!!!\n".to_owned();
+
+    let results = analyse_sequences(missing_sequence);
+    assert_eq!(results.len(), 1);
+    assert!(!results[0].is_valid)
   }
 }

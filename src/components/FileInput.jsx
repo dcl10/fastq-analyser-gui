@@ -4,9 +4,9 @@ import {
   FormErrorMessage,
   FormHelperText,
   Input
-} from '@chakra-ui/react'
+} from '@chakra-ui/react';
 
-function FileInput({isInvalid = false, title, onChange, id}) {
+function FileInput({ isInvalid = false, title, onChange, id }) {
   return (
     <FormControl isInvalid={isInvalid}>
       <FormLabel>{title}</FormLabel>
@@ -23,7 +23,7 @@ function FileInput({isInvalid = false, title, onChange, id}) {
         )
       }
     </FormControl>
-  )
+  );
 }
 
-export default FileInput
+export default FileInput;

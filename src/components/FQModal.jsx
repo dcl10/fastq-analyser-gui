@@ -3,10 +3,9 @@ import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
-  ModalFooter,
   ModalBody,
   ModalCloseButton,
-} from '@chakra-ui/react'
+} from '@chakra-ui/react';
 
 function FQModal({ children, isOpen, onClose, title }) {
   return (
@@ -18,7 +17,7 @@ function FQModal({ children, isOpen, onClose, title }) {
         <ModalBody>{children}</ModalBody>
       </ModalContent>
     </Modal>
-  )
+  );
 }
 
-export default FQModal
+export default FQModal;

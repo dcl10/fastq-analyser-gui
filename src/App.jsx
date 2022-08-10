@@ -55,13 +55,20 @@ function App() {
     setResults(results)
   }
 
+  //Clear the results when the modal is closed
+  const closeAndClearResults = () => {
+    clearInputs()
+    setResults([])
+    onClose()
+  }
+
   return (
     <Container className='App'>
       {/* Results modal */}
       <FQModal 
         title={'Results'}
         isOpen={isOpen}
-        onClose={onClose}
+        onClose={closeAndClearResults}
       >
         {results.length > 0 ? (
             <Accordion allowMultiple allowToggle>

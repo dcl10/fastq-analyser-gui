@@ -1,6 +1,6 @@
 [package]
 name = "fastq_analyser"
-version = "0.1.0"
+version = "0.1.1"
 description = "A desktop application that analyses FastQ records."
 authors = ["dcl10"]
 license = "MIT"

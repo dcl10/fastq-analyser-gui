@@ -11,18 +11,8 @@ pub struct SeqResult {
     is_valid: bool,
 }
 
-#[tauri::command]
-pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
+fn analyse_records<'a>(records: &'a fastq::Records<_>) -> Vec<SeqResult> {
     let mut results = Vec::new();
-    let reader = fastq::Reader::new(sequences.as_bytes());
-    let records = reader.records().map(|rec| rec.unwrap_or_default());
-
-    // Hyperparameters for finding open reading frames (ORFs).
-    // NB: DNA alphabet
-    let start_codons = vec![b"ATG"];
-    let stop_codons = vec![b"TGA", b"TAG", b"TAA"];
-    let min_len = 50;
-    let finder = orf::Finder::new(start_codons, stop_codons, min_len);
 
     // Iterate over results and find GC content and ORFs
     for rec in records {
@@ -49,6 +39,24 @@ pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
 }
 
 #[tauri::command]
+pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
+    let mut results = Vec::new();
+    let reader = fastq::Reader::new(sequences.as_bytes());
+    let records = reader.records().map(|rec| rec.unwrap_or_default());
+
+    // Hyperparameters for finding open reading frames (ORFs).
+    // NB: DNA alphabet
+    let start_codons = vec![b"ATG"];
+    let stop_codons = vec![b"TGA", b"TAG", b"TAA"];
+    let min_len = 50;
+    let finder = orf::Finder::new(start_codons, stop_codons, min_len);
+
+    results = analyse_records(records);
+
+    results
+}
+
+#[tauri::command]
 fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
     let mut results = Vec::new();
     let reader = fastq::Reader::from_file(path).unwrap();
@@ -61,26 +69,7 @@ fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
     let min_len = 50;
     let finder = orf::Finder::new(start_codons, stop_codons, min_len);
 
-    // Iterate over results and find GC content and ORFs
-    for rec in records {
-        if rec.check().is_ok() {
-            let gc_ = gc::gc_content(rec.seq());
-            let n_orfs = finder.find_all(rec.seq()).count();
-            results.push(SeqResult {
-                n_orfs,
-                id: rec.id().to_owned(),
-                desc: rec.desc().unwrap_or("").to_owned(),
-                gc: gc_,
-                is_valid: rec.check().is_ok(),
-            });
-        } else {
-            results.push(SeqResult {
-                id: "Invalid Record".to_owned(),
-                is_valid: rec.check().is_ok(),
-                ..Default::default()
-            });
-        }
-    }
+    results = analyse_records(records);
 
     results
 }

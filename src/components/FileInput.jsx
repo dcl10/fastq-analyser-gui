@@ -1,16 +1,24 @@
 import {
+  Button,
   FormControl,
   FormLabel,
   FormErrorMessage,
   FormHelperText,
-  Input
+  Input,
+  InputGroup,
+  InputLeftAddon,
 } from '@chakra-ui/react'
 
-function FileInput({isInvalid = false, title, onChange, id}) {
+function FileInput({isInvalid = false, title, onClick, id}) {
   return (
     <FormControl isInvalid={isInvalid}>
       <FormLabel>{title}</FormLabel>
-      <Input type='file' onChange={onChange} id={id} />
+      <InputGroup>
+        <InputLeftAddon>
+          <Button size={'sm'}  onClick={onClick}>Select</Button>
+        </InputLeftAddon>
+        <Input isReadOnly id={id} />
+      </InputGroup>
       {
         isInvalid ? (
           <FormErrorMessage>

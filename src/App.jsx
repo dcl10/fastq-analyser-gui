@@ -19,10 +19,11 @@ import FileInput from './components/FileInput'
 import FQModal from './components/FQModal'
 import LoadingIndicator from './components/LoadingIndicator'
 import TextInput from './components/TextInput'
+import { open } from '@tauri-apps/api/dialog'
 
 function App() {
   const textSequences = useRef('')
-  const fileSequences = useRef()
+  const fileSequences = useRef('')
   const [results, setResults] = useState([])
 
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -33,8 +34,23 @@ function App() {
   }
 
   // Change the file sequences in state
-  const handleFileInput = (event) => {
-    fileSequences.current = event.target.files[0]
+  const handleFileInput = async (event) => {
+    let filePath = await open(
+      {
+        directory: false,
+        multiple: false,
+        filters: [
+          {
+            name: 'FastQ files',
+            extensions: ['fq', 'fastq']
+          }
+        ]
+      }
+    )
+
+    let fileInput = document.getElementById('file-input')
+    fileInput.value = filePath
+    fileSequences.current = filePath
   }
 
   // Clear the input fields and reset the state
@@ -45,13 +61,20 @@ function App() {
 
     let fileInput = document.getElementById('file-input')
     fileInput.value = ''
-    fileSequences.current = undefined
+    fileSequences.current = ''
   }
 
   // Send the text sequences to the backend and return the analytics
-  const analyseSequences = async () => {
+  const analyseTextSequences = async () => {
     onOpen()
     let results = await invoke('analyse_sequences', {sequences: textSequences.current})
+    setResults(results)
+  }
+
+  // Send the file sequences to the backend and return the analytics
+  const analyseFileSequences = async () => {
+    onOpen()
+    let results = await invoke('analyse_file', {path: fileSequences.current})
     setResults(results)
   }
 
@@ -124,14 +147,14 @@ function App() {
           </AccordionPanel>
         </AccordionItem>
 
-        <AccordionItem isDisabled>
+        <AccordionItem>
           <AccordionButton>
             <Text>Input File</Text>
             <Spacer />
             <AccordionIcon />
           </AccordionButton>
           <AccordionPanel>
-            <FileInput id='file-input' title={'Upload Fastq file'} onChange={handleFileInput} />
+            <FileInput id='file-input' title={'Upload Fastq file'} onClick={handleFileInput} />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>
@@ -141,7 +164,17 @@ function App() {
         <ButtonGroup spacing={4}>
           <Button
             colorScheme='blue'
-            onClick={analyseSequences}
+            onClick={() => {
+              if (textSequences.current && fileSequences.current) {
+                alert('You may only send either text or a file. Not both.')
+              } else if (textSequences.current) {
+                analyseTextSequences()
+              } else if (fileSequences.current) {
+                analyseFileSequences()
+              } else {
+                alert('Please give either text or a file.')
+              }
+            }}
           >
             Submit
           </Button>

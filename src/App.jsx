@@ -38,7 +38,13 @@ function App() {
     let filePath = await open(
       {
         directory: false,
-        multiple: false
+        multiple: false,
+        filters: [
+          {
+            name: 'FastQ files',
+            extensions: ['fq', 'fastq']
+          }
+        ]
       }
     )
 

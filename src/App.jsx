@@ -59,9 +59,16 @@ function App() {
   }
 
   // Send the text sequences to the backend and return the analytics
-  const analyseSequences = async () => {
+  const analyseTextSequences = async () => {
     onOpen()
     let results = await invoke('analyse_sequences', {sequences: textSequences.current})
+    setResults(results)
+  }
+
+  // Send the file sequences to the backend and return the analytics
+  const analyseFileSequences = async () => {
+    onOpen()
+    let results = await invoke('analyse_file', {sequences: fileSequences.current})
     setResults(results)
   }
 
@@ -151,7 +158,17 @@ function App() {
         <ButtonGroup spacing={4}>
           <Button
             colorScheme='blue'
-            onClick={analyseSequences}
+            onClick={() => {
+              if (textSequences.current && fileSequences.current) {
+                alert('You may only send either text or a file. Not both.')
+              } else if (textSequences.current) {
+                analyseTextSequences()
+              } else if (fileSequences.current) {
+                analyseFileSequences()
+              } else {
+                alert('Please give either text or a file.')
+              }
+            }}
           >
             Submit
           </Button>

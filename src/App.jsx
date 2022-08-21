@@ -19,6 +19,7 @@ import FileInput from './components/FileInput'
 import FQModal from './components/FQModal'
 import LoadingIndicator from './components/LoadingIndicator'
 import TextInput from './components/TextInput'
+import { open } from '@tauri-apps/api/dialog'
 
 function App() {
   const textSequences = useRef('')
@@ -33,8 +34,15 @@ function App() {
   }
 
   // Change the file sequences in state
-  const handleFileInput = (event) => {
-    fileSequences.current = event.target.files[0]
+  const handleFileInput = async (event) => {
+    let filePath = await open(
+      {
+        directory: false,
+        multiple: false
+      }
+    )
+    console.log(`chosen file: ${filePath}`)
+    fileSequences.current = filePath
   }
 
   // Clear the input fields and reset the state
@@ -124,7 +132,7 @@ function App() {
           </AccordionPanel>
         </AccordionItem>
 
-        <AccordionItem isDisabled>
+        <AccordionItem>
           <AccordionButton>
             <Text>Input File</Text>
             <Spacer />

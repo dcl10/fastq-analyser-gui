@@ -131,5 +131,8 @@ mod tests {
         let results = analyse_file(test_file_name);
         remove_test_fq_file(test_file_name);
         assert_eq!(results.len(), 20);
+        for result in results {
+            assert!(result.is_valid)
+        }
     }
 }

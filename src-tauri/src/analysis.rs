@@ -63,7 +63,7 @@ pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
 }
 
 #[tauri::command]
-fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
+pub fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
     let reader = fastq::Reader::from_file(path).unwrap();
     let records: Vec<fastq::Record> = reader
         .records()

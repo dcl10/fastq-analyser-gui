@@ -11,7 +11,7 @@ pub struct SeqResult {
     is_valid: bool,
 }
 
-fn analyse_records<'a>(records: &'a Vec<fastq::Record>) -> Vec<SeqResult> {
+fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
     let mut results = Vec::new();
 
     // Iterate over results and find GC content and ORFs

@@ -23,7 +23,7 @@ import { open } from '@tauri-apps/api/dialog'
 
 function App() {
   const textSequences = useRef('')
-  const fileSequences = useRef()
+  const fileSequences = useRef('')
   const [results, setResults] = useState([])
 
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -41,7 +41,9 @@ function App() {
         multiple: false
       }
     )
-    console.log(`chosen file: ${filePath}`)
+
+    let fileInput = document.getElementById('file-input')
+    fileInput.value = filePath
     fileSequences.current = filePath
   }
 
@@ -53,7 +55,7 @@ function App() {
 
     let fileInput = document.getElementById('file-input')
     fileInput.value = ''
-    fileSequences.current = undefined
+    fileSequences.current = ''
   }
 
   // Send the text sequences to the backend and return the analytics
@@ -139,7 +141,7 @@ function App() {
             <AccordionIcon />
           </AccordionButton>
           <AccordionPanel>
-            <FileInput id='file-input' title={'Upload Fastq file'} onChange={handleFileInput} />
+            <FileInput id='file-input' title={'Upload Fastq file'} onClick={handleFileInput} />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>

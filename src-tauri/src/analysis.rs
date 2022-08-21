@@ -11,14 +11,14 @@ pub struct SeqResult {
     is_valid: bool,
 }
 
-fn analyse_records<'a>(records: &'a fastq::Records<_>) -> Vec<SeqResult> {
+fn analyse_records<'a>(records: &'a Vec<fastq::Record>) -> Vec<SeqResult> {
     let mut results = Vec::new();
 
     // Iterate over results and find GC content and ORFs
     for rec in records {
         if rec.check().is_ok() {
             let gc_ = gc::gc_content(rec.seq());
-            let n_orfs = finder.find_all(rec.seq()).count();
+            let n_orfs = find_orfs(rec);
             results.push(SeqResult {
                 n_orfs,
                 id: rec.id().to_owned(),
@@ -38,12 +38,7 @@ fn analyse_records<'a>(records: &'a fastq::Records<_>) -> Vec<SeqResult> {
     results
 }
 
-#[tauri::command]
-pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
-    let mut results = Vec::new();
-    let reader = fastq::Reader::new(sequences.as_bytes());
-    let records = reader.records().map(|rec| rec.unwrap_or_default());
-
+fn find_orfs(rec: &fastq::Record) -> usize {
     // Hyperparameters for finding open reading frames (ORFs).
     // NB: DNA alphabet
     let start_codons = vec![b"ATG"];
@@ -51,25 +46,31 @@ pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
     let min_len = 50;
     let finder = orf::Finder::new(start_codons, stop_codons, min_len);
 
-    results = analyse_records(records);
+    finder.find_all(rec.seq()).count()
+}
+
+#[tauri::command]
+pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
+    let reader = fastq::Reader::new(sequences.as_bytes());
+    let records: Vec<fastq::Record> = reader
+        .records()
+        .map(|rec| rec.unwrap_or_default())
+        .collect();
+
+    let results = analyse_records(&records);
 
     results
 }
 
 #[tauri::command]
 fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
-    let mut results = Vec::new();
     let reader = fastq::Reader::from_file(path).unwrap();
-    let records = reader.records().map(|rec| rec.unwrap_or_default());
+    let records: Vec<fastq::Record> = reader
+        .records()
+        .map(|rec| rec.unwrap_or_default())
+        .collect();
 
-    // Hyperparameters for finding open reading frames (ORFs).
-    // NB: DNA alphabet
-    let start_codons = vec![b"ATG"];
-    let stop_codons = vec![b"TGA", b"TAG", b"TAA"];
-    let min_len = 50;
-    let finder = orf::Finder::new(start_codons, stop_codons, min_len);
-
-    results = analyse_records(records);
+    let results = analyse_records(&records);
 
     results
 }

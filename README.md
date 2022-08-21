@@ -15,6 +15,4 @@ npm run tauri build
 ```
 
 ## How to use
-Copy and paste one or many FastQ records into the text area and click "Submit". The results for each record will then appear on the screen.
-
-**Coming soon:** upload a FastQ file to get the records analysed.
+Copy and paste one or many FastQ records into the text area, or select a FastQ file and click "Submit". The results for each record will then appear on the screen.

@@ -50,7 +50,39 @@ pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
 
 #[tauri::command]
 fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
-    vec![SeqResult::default()]
+    let mut results = Vec::new();
+    let reader = fastq::Reader::from_file(path).unwrap();
+    let records = reader.records().map(|rec| rec.unwrap_or_default());
+
+    // Hyperparameters for finding open reading frames (ORFs).
+    // NB: DNA alphabet
+    let start_codons = vec![b"ATG"];
+    let stop_codons = vec![b"TGA", b"TAG", b"TAA"];
+    let min_len = 50;
+    let finder = orf::Finder::new(start_codons, stop_codons, min_len);
+
+    // Iterate over results and find GC content and ORFs
+    for rec in records {
+        if rec.check().is_ok() {
+            let gc_ = gc::gc_content(rec.seq());
+            let n_orfs = finder.find_all(rec.seq()).count();
+            results.push(SeqResult {
+                n_orfs,
+                id: rec.id().to_owned(),
+                desc: rec.desc().unwrap_or("").to_owned(),
+                gc: gc_,
+                is_valid: rec.check().is_ok(),
+            });
+        } else {
+            results.push(SeqResult {
+                id: "Invalid Record".to_owned(),
+                is_valid: rec.check().is_ok(),
+                ..Default::default()
+            });
+        }
+    }
+
+    results
 }
 
 #[cfg(test)]
@@ -61,7 +93,7 @@ mod tests {
 
     fn create_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
         let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
-        for i in 2..20 {
+        for i in 2..21 {
             fqs_str.push_str(format!("@id{} description\nGCGC\n+\n!!!!\n", i).as_str());
         }
 
@@ -108,6 +140,6 @@ mod tests {
         create_test_fq_file(test_file_name);
         let results = analyse_file(test_file_name);
         remove_test_fq_file(test_file_name);
-        assert!(false)
+        assert_eq!(results.len(), 20);
     }
 }

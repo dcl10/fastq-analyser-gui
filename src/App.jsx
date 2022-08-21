@@ -74,7 +74,7 @@ function App() {
   // Send the file sequences to the backend and return the analytics
   const analyseFileSequences = async () => {
     onOpen()
-    let results = await invoke('analyse_file', {sequences: fileSequences.current})
+    let results = await invoke('analyse_file', {path: fileSequences.current})
     setResults(results)
   }
 

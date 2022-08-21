@@ -49,7 +49,7 @@ pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
 }
 
 #[tauri::command]
-fn analyse_file(path_to_file: &std::path::Path) -> Vec<SeqResult> {
+fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
     vec![SeqResult::default()]
 }
 
@@ -59,19 +59,19 @@ mod tests {
 
     use crate::analysis::{analyse_file, analyse_sequences};
 
-    fn create_test_fq_file() -> std::io::Result<()> {
+    fn create_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
         let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
-        for i in (2..20) {
+        for i in 2..20 {
             fqs_str.push_str(format!("@id{} description\nGCGC\n+\n!!!!\n", i).as_str());
         }
 
-        let mut test_file = std::fs::File::create("test_fastq.fq")?;
+        let mut test_file = std::fs::File::create(path)?;
         test_file.write_all(fqs_str.as_bytes())?;
         Ok(())
     }
 
-    fn remove_test_fq_file() -> std::io::Result<()> {
-        std::fs::remove_file("test_fastq.fq")?;
+    fn remove_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
+        std::fs::remove_file(path)?;
         Ok(())
     }
 
@@ -104,8 +104,10 @@ mod tests {
 
     #[test]
     fn test_analyse_file() {
-        create_test_fq_file();
-        remove_test_fq_file();
+        let test_file_name = std::path::Path::new("test_fastq.fq");
+        create_test_fq_file(test_file_name);
+        let results = analyse_file(test_file_name);
+        remove_test_fq_file(test_file_name);
         assert!(false)
     }
 }

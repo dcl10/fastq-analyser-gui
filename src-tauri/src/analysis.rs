@@ -9,6 +9,7 @@ pub struct SeqResult {
     gc: f32,
     n_orfs: usize,
     is_valid: bool,
+    phred_score: i32,
 }
 
 fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
@@ -25,6 +26,7 @@ fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
                 desc: rec.desc().unwrap_or("").to_owned(),
                 gc: gc_,
                 is_valid: rec.check().is_ok(),
+                phred_score: 0,
             });
         } else {
             results.push(SeqResult {

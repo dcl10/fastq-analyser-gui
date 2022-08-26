@@ -50,7 +50,7 @@ fn find_orfs(rec: &fastq::Record) -> usize {
 }
 
 #[tauri::command]
-pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
+pub fn analyse_sequences(sequences: &str) -> Vec<SeqResult> {
     let reader = fastq::Reader::new(sequences.as_bytes());
     let records: Vec<fastq::Record> = reader
         .records()
@@ -99,16 +99,16 @@ mod tests {
 
     #[test]
     fn test_analyse_sequences() {
-        let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
+        let mut fqs_str = "@id description\nATAT\n+\n!!!!\n".to_owned();
         fqs_str.push_str("@id description\nGCGC\n+\n!!!!\n");
 
-        let results = analyse_sequences(fqs_str);
+        let results = analyse_sequences(fqs_str.as_str());
         assert_eq!(results.len(), 2);
     }
 
     #[test]
     fn test_missing_sequence() {
-        let missing_sequence: String = "@id description\n\n+\n!!!!\n".to_owned();
+        let missing_sequence = "@id description\n\n+\n!!!!\n";
 
         let results = analyse_sequences(missing_sequence);
         assert_eq!(results.len(), 1);
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_missing_quality() {
-        let missing_quality: String = "@id description\nATAT\n+\n\n".to_owned();
+        let missing_quality = "@id description\nATAT\n+\n\n";
 
         let results = analyse_sequences(missing_quality);
         assert_eq!(results.len(), 1);

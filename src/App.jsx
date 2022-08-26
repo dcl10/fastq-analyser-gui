@@ -111,7 +111,10 @@ function App() {
                           <strong>Description:</strong>&nbsp;{result.desc}
                         </Text>
                         <Text>
-                          <strong>Record is valid?</strong>&nbsp;{result.is_valid ? 'Yes': 'No'}
+                          <strong>Record is valid?</strong>&nbsp;{result.is_valid ? 'Yes' : 'No'}
+                        </Text>
+                        <Text>
+                          <strong>PHRED score per base:</strong>&nbsp;{result.phred_score / result.seq_len}
                         </Text>
                         <Text>
                           <strong>GC %:</strong>&nbsp;{result.gc * 100}%

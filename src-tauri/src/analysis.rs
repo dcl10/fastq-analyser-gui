@@ -9,7 +9,8 @@ pub struct SeqResult {
     gc: f32,
     n_orfs: usize,
     is_valid: bool,
-    phred_score: u32,
+    phred_score: usize,
+    seq_len: usize,
 }
 
 fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
@@ -27,6 +28,7 @@ fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
                 gc: gc_,
                 is_valid: rec.check().is_ok(),
                 phred_score: calc_phred_score(rec.qual()),
+                seq_len: rec.seq().len(),
             });
         } else {
             results.push(SeqResult {
@@ -51,7 +53,7 @@ fn find_orfs(rec: &fastq::Record) -> usize {
     finder.find_all(rec.seq()).count()
 }
 
-fn calc_phred_score(qual: &[u8]) -> u32 {
+fn calc_phred_score(qual: &[u8]) -> usize {
     let mut score = 0;
     for q in qual {
         score += q - 33;

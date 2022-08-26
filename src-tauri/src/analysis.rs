@@ -9,7 +9,7 @@ pub struct SeqResult {
     gc: f32,
     n_orfs: usize,
     is_valid: bool,
-    phred_score: i32,
+    phred_score: u32,
 }
 
 fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
@@ -26,7 +26,7 @@ fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
                 desc: rec.desc().unwrap_or("").to_owned(),
                 gc: gc_,
                 is_valid: rec.check().is_ok(),
-                phred_score: 0,
+                phred_score: calc_phred_score(rec.qual()),
             });
         } else {
             results.push(SeqResult {
@@ -49,6 +49,14 @@ fn find_orfs(rec: &fastq::Record) -> usize {
     let finder = orf::Finder::new(start_codons, stop_codons, min_len);
 
     finder.find_all(rec.seq()).count()
+}
+
+fn calc_phred_score(qual: &[u8]) -> u32 {
+    let mut score = 0;
+    for q in qual {
+        score += q - 33;
+    }
+    score.into()
 }
 
 #[tauri::command]
@@ -81,7 +89,7 @@ pub fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
 mod tests {
     use std::io::Write;
 
-    use crate::analysis::{analyse_file, analyse_sequences};
+    use crate::analysis::{analyse_file, analyse_sequences, calc_phred_score};
 
     fn create_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
         let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
@@ -136,5 +144,14 @@ mod tests {
         for result in results {
             assert!(result.is_valid)
         }
+    }
+
+    #[test]
+    fn test_calc_phred_score() {
+        let qual_str = b"####";
+        assert_eq!(calc_phred_score(qual_str), 8);
+
+        let qual_str = b"!!!!";
+        assert_eq!(calc_phred_score(qual_str), 0);
     }
 }

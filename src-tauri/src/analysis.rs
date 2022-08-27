@@ -9,6 +9,8 @@ pub struct SeqResult {
     gc: f32,
     n_orfs: usize,
     is_valid: bool,
+    phred_score: usize,
+    seq_len: usize,
 }
 
 fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
@@ -25,6 +27,8 @@ fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
                 desc: rec.desc().unwrap_or("").to_owned(),
                 gc: gc_,
                 is_valid: rec.check().is_ok(),
+                phred_score: calc_phred_score(rec.qual()),
+                seq_len: rec.seq().len(),
             });
         } else {
             results.push(SeqResult {
@@ -49,8 +53,16 @@ fn find_orfs(rec: &fastq::Record) -> usize {
     finder.find_all(rec.seq()).count()
 }
 
+fn calc_phred_score(qual: &[u8]) -> usize {
+    let mut score = 0;
+    for q in qual {
+        score += q - 33;
+    }
+    score.into()
+}
+
 #[tauri::command]
-pub fn analyse_sequences(sequences: String) -> Vec<SeqResult> {
+pub fn analyse_sequences(sequences: &str) -> Vec<SeqResult> {
     let reader = fastq::Reader::new(sequences.as_bytes());
     let records: Vec<fastq::Record> = reader
         .records()
@@ -79,7 +91,7 @@ pub fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
 mod tests {
     use std::io::Write;
 
-    use crate::analysis::{analyse_file, analyse_sequences};
+    use crate::analysis::{analyse_file, analyse_sequences, calc_phred_score};
 
     fn create_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
         let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
@@ -99,16 +111,16 @@ mod tests {
 
     #[test]
     fn test_analyse_sequences() {
-        let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
+        let mut fqs_str = "@id description\nATAT\n+\n!!!!\n".to_owned();
         fqs_str.push_str("@id description\nGCGC\n+\n!!!!\n");
 
-        let results = analyse_sequences(fqs_str);
+        let results = analyse_sequences(fqs_str.as_str());
         assert_eq!(results.len(), 2);
     }
 
     #[test]
     fn test_missing_sequence() {
-        let missing_sequence: String = "@id description\n\n+\n!!!!\n".to_owned();
+        let missing_sequence = "@id description\n\n+\n!!!!\n";
 
         let results = analyse_sequences(missing_sequence);
         assert_eq!(results.len(), 1);
@@ -117,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_missing_quality() {
-        let missing_quality: String = "@id description\nATAT\n+\n\n".to_owned();
+        let missing_quality = "@id description\nATAT\n+\n\n";
 
         let results = analyse_sequences(missing_quality);
         assert_eq!(results.len(), 1);
@@ -134,5 +146,14 @@ mod tests {
         for result in results {
             assert!(result.is_valid)
         }
+    }
+
+    #[test]
+    fn test_calc_phred_score() {
+        let qual_str = b"####";
+        assert_eq!(calc_phred_score(qual_str), 8);
+
+        let qual_str = b"!!!!";
+        assert_eq!(calc_phred_score(qual_str), 0);
     }
 }

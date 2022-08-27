@@ -42,7 +42,7 @@ function App() {
         filters: [
           {
             name: 'FastQ files',
-            extensions: ['fq', 'fastq']
+            extensions: ['fq', 'fastq', 'fastq.gz', 'fq.gz']
           }
         ]
       }

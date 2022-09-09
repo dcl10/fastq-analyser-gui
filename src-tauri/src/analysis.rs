@@ -1,5 +1,6 @@
 use bio::io::fastq;
 use bio::seq_analysis::{gc, orf};
+use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Deserialize, Serialize)]
@@ -89,6 +90,8 @@ pub fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
 
 #[cfg(test)]
 mod tests {
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
     use std::io::Write;
 
     use crate::analysis::{analyse_file, analyse_sequences, calc_phred_score};
@@ -101,6 +104,18 @@ mod tests {
 
         let mut test_file = std::fs::File::create(path)?;
         test_file.write_all(fqs_str.as_bytes())?;
+        Ok(())
+    }
+
+    fn create_test_gz_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
+        let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
+        for i in 2..21 {
+            fqs_str.push_str(format!("@id{} description\nGCGC\n+\n!!!!\n", i).as_str());
+        }
+
+        let test_file = std::fs::File::create(path)?;
+        let mut gz_encoder = GzEncoder::new(test_file, Compression::default());
+        gz_encoder.write_all(fqs_str.as_bytes())?;
         Ok(())
     }
 
@@ -140,6 +155,18 @@ mod tests {
     fn test_analyse_file() {
         let test_file_name = std::path::Path::new("test_fastq.fq");
         create_test_fq_file(test_file_name);
+        let results = analyse_file(test_file_name);
+        remove_test_fq_file(test_file_name);
+        assert_eq!(results.len(), 20);
+        for result in results {
+            assert!(result.is_valid)
+        }
+    }
+
+    #[test]
+    fn test_analyse_zipped_file() {
+        let test_file_name = std::path::Path::new("test_fastq.fq.gz");
+        create_test_gz_file(test_file_name);
         let results = analyse_file(test_file_name);
         remove_test_fq_file(test_file_name);
         assert_eq!(results.len(), 20);

@@ -62,6 +62,14 @@ fn calc_phred_score(qual: &[u8]) -> usize {
     score.into()
 }
 
+fn read_zipped(path: &std::path::Path) {
+    todo!()
+}
+
+fn read_unzipped(path: &std::path::Path) -> fastq::Reader<std::io::BufReader<std::fs::File>> {
+    fastq::Reader::from_file(path).unwrap()
+}
+
 #[tauri::command]
 pub fn analyse_sequences(sequences: &str) -> Vec<SeqResult> {
     let reader = fastq::Reader::new(sequences.as_bytes());

@@ -2,6 +2,9 @@ use bio::io::fastq;
 use bio::seq_analysis::{gc, orf};
 use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct SeqResult {
@@ -62,12 +65,8 @@ fn calc_phred_score(qual: &[u8]) -> usize {
     score.into()
 }
 
-fn read_zipped(path: &std::path::Path) {
+fn read_sequence_file(path: &Path) -> impl Read {
     todo!()
-}
-
-fn read_unzipped(path: &std::path::Path) -> fastq::Reader<std::io::BufReader<std::fs::File>> {
-    fastq::Reader::from_file(path).unwrap()
 }
 
 #[tauri::command]
@@ -84,8 +83,11 @@ pub fn analyse_sequences(sequences: &str) -> Vec<SeqResult> {
 }
 
 #[tauri::command]
-pub fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
-    let reader = fastq::Reader::from_file(path).unwrap();
+pub fn analyse_file(path: &Path) -> Vec<SeqResult> {
+    let reader = match path.ends_with(".gz") {
+        true => read_zipped(path),
+        false => read_unzipped(path),
+    };
     let records: Vec<fastq::Record> = reader
         .records()
         .map(|rec| rec.unwrap_or_default())
@@ -100,35 +102,37 @@ pub fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
 mod tests {
     use flate2::write::GzEncoder;
     use flate2::Compression;
-    use std::io::Write;
+    use std::fs::{remove_file, File};
+    use std::io::{Result, Write};
+    use std::path::Path;
 
     use crate::analysis::{analyse_file, analyse_sequences, calc_phred_score};
 
-    fn create_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
+    fn create_test_fq_file<'a>(path: &'a Path) -> Result<()> {
         let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
         for i in 2..21 {
             fqs_str.push_str(format!("@id{} description\nGCGC\n+\n!!!!\n", i).as_str());
         }
 
-        let mut test_file = std::fs::File::create(path)?;
+        let mut test_file = File::create(path)?;
         test_file.write_all(fqs_str.as_bytes())?;
         Ok(())
     }
 
-    fn create_test_gz_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
+    fn create_test_gz_file<'a>(path: &'a Path) -> Result<()> {
         let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
         for i in 2..21 {
             fqs_str.push_str(format!("@id{} description\nGCGC\n+\n!!!!\n", i).as_str());
         }
 
-        let test_file = std::fs::File::create(path)?;
+        let test_file = File::create(path)?;
         let mut gz_encoder = GzEncoder::new(test_file, Compression::default());
         gz_encoder.write_all(fqs_str.as_bytes())?;
         Ok(())
     }
 
-    fn remove_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
-        std::fs::remove_file(path)?;
+    fn remove_test_fq_file<'a>(path: &'a Path) -> Result<()> {
+        remove_file(path)?;
         Ok(())
     }
 
@@ -161,7 +165,7 @@ mod tests {
 
     #[test]
     fn test_analyse_file() {
-        let test_file_name = std::path::Path::new("test_fastq.fq");
+        let test_file_name = Path::new("test_fastq.fq");
         create_test_fq_file(test_file_name);
         let results = analyse_file(test_file_name);
         remove_test_fq_file(test_file_name);
@@ -173,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_analyse_zipped_file() {
-        let test_file_name = std::path::Path::new("test_fastq.fq.gz");
+        let test_file_name = Path::new("test_fastq.fq.gz");
         create_test_gz_file(test_file_name);
         let results = analyse_file(test_file_name);
         remove_test_fq_file(test_file_name);

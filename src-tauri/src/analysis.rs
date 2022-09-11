@@ -3,7 +3,7 @@ use bio::seq_analysis::{gc, orf};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Deserialize, Serialize)]
-pub struct SeqResult {
+pub struct FastqSeqResult {
     id: String,
     desc: String,
     gc: f32,
@@ -13,7 +13,7 @@ pub struct SeqResult {
     seq_len: usize,
 }
 
-fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
+fn analyse_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
     let mut results = Vec::new();
 
     // Iterate over results and find GC content and ORFs
@@ -21,7 +21,7 @@ fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
         if rec.check().is_ok() {
             let gc_ = gc::gc_content(rec.seq());
             let n_orfs = find_orfs(rec);
-            results.push(SeqResult {
+            results.push(FastqSeqResult {
                 n_orfs,
                 id: rec.id().to_owned(),
                 desc: rec.desc().unwrap_or("").to_owned(),
@@ -31,7 +31,7 @@ fn analyse_records(records: &Vec<fastq::Record>) -> Vec<SeqResult> {
                 seq_len: rec.seq().len(),
             });
         } else {
-            results.push(SeqResult {
+            results.push(FastqSeqResult {
                 id: "Invalid Record".to_owned(),
                 is_valid: rec.check().is_ok(),
                 ..Default::default()
@@ -63,7 +63,7 @@ fn calc_phred_score(qual: &[u8]) -> u32 {
 }
 
 #[tauri::command]
-pub fn analyse_sequences(sequences: &str) -> Vec<SeqResult> {
+pub fn analyse_sequences(sequences: &str) -> Vec<FastqSeqResult> {
     let reader = fastq::Reader::new(sequences.as_bytes());
     let records: Vec<fastq::Record> = reader
         .records()
@@ -76,7 +76,7 @@ pub fn analyse_sequences(sequences: &str) -> Vec<SeqResult> {
 }
 
 #[tauri::command]
-pub fn analyse_file(path: &std::path::Path) -> Vec<SeqResult> {
+pub fn analyse_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
     let reader = fastq::Reader::from_file(path).unwrap();
     let records: Vec<fastq::Record> = reader
         .records()

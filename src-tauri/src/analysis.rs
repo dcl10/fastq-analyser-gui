@@ -9,7 +9,7 @@ pub struct SeqResult {
     gc: f32,
     n_orfs: usize,
     is_valid: bool,
-    phred_score: usize,
+    phred_score: u32,
     seq_len: usize,
 }
 
@@ -53,12 +53,13 @@ fn find_orfs(rec: &fastq::Record) -> usize {
     finder.find_all(rec.seq()).count()
 }
 
-fn calc_phred_score(qual: &[u8]) -> usize {
+fn calc_phred_score(qual: &[u8]) -> u32 {
     let mut score = 0;
     for q in qual {
-        score += q - 33;
+        let q_32bit = u32::from(*q);
+        score += q_32bit - 33;
     }
-    score.into()
+    score
 }
 
 #[tauri::command]

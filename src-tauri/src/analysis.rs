@@ -2,8 +2,9 @@ use bio::io::fastq;
 use bio::seq_analysis::{gc, orf};
 use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
+use std::ffi::OsStr;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 
 #[derive(Default, Deserialize, Serialize)]
@@ -65,10 +66,6 @@ fn calc_phred_score(qual: &[u8]) -> usize {
     score.into()
 }
 
-fn read_sequence_file(path: &Path) -> impl Read {
-    todo!()
-}
-
 #[tauri::command]
 pub fn analyse_sequences(sequences: &str) -> Vec<SeqResult> {
     let reader = fastq::Reader::new(sequences.as_bytes());
@@ -84,10 +81,7 @@ pub fn analyse_sequences(sequences: &str) -> Vec<SeqResult> {
 
 #[tauri::command]
 pub fn analyse_file(path: &Path) -> Vec<SeqResult> {
-    let reader = match path.ends_with(".gz") {
-        true => read_zipped(path),
-        false => read_unzipped(path),
-    };
+    let reader = fastq::Reader::from_file(path).unwrap();
     let records: Vec<fastq::Record> = reader
         .records()
         .map(|rec| rec.unwrap_or_default())

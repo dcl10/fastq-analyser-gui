@@ -15,6 +15,7 @@ import {
   Spacer,
 } from '@chakra-ui/react'
 import { invoke } from '@tauri-apps/api'
+import FastQResultPanel from './components/FastqResultPanel'
 import FileInput from './components/FileInput'
 import FQModal from './components/FQModal'
 import LoadingIndicator from './components/LoadingIndicator'
@@ -107,24 +108,9 @@ function App() {
                         <AccordionIcon />
                       </AccordionButton>
                       <AccordionPanel>
-                        <Text>
-                          <strong>Description:</strong>&nbsp;{result.desc}
-                        </Text>
-                        <Text>
-                          <strong>Record is valid?</strong>&nbsp;{result.is_valid ? 'Yes' : 'No'}
-                        </Text>
-                        <Text>
-                          <strong>Sequence length:</strong>&nbsp;{result.seq_len} bases
-                        </Text>
-                        <Text>
-                          <strong>PHRED score per base:</strong>&nbsp;{result.phred_score / result.seq_len}
-                        </Text>
-                        <Text>
-                          <strong>GC %:</strong>&nbsp;{result.gc * 100}%
-                        </Text>
-                        <Text>
-                          <strong>No.# ORFs:</strong>&nbsp;{result.n_orfs}
-                        </Text>
+                        {result.type === "fastq" && 
+                          <FastQResultPanel result={result} />
+                        }
                       </AccordionPanel>
                     </AccordionItem>
                   )

@@ -29,6 +29,31 @@ impl Default for FastqSeqResult {
     }
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct FastaSeqResult {
+    id: String,
+    desc: String,
+    gc: f32,
+    n_orfs: usize,
+    is_valid: bool,
+    seq_len: usize,
+    result_type: String,
+}
+
+impl Default for FastaSeqResult {
+    fn default() -> Self {
+        FastaSeqResult {
+            id: String::from("id"),
+            desc: String::from("..."),
+            gc: 0.0,
+            n_orfs: 0,
+            is_valid: false,
+            seq_len: 0,
+            result_type: String::from("fasta"),
+        }
+    }
+}
+
 fn analyse_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
     let mut results = Vec::new();
 

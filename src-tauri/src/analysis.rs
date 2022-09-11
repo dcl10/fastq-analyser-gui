@@ -2,7 +2,7 @@ use bio::io::fastq;
 use bio::seq_analysis::{gc, orf};
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct FastqSeqResult {
     id: String,
     desc: String,
@@ -11,6 +11,22 @@ pub struct FastqSeqResult {
     is_valid: bool,
     phred_score: u32,
     seq_len: usize,
+    result_type: String,
+}
+
+impl Default for FastqSeqResult {
+    fn default() -> Self {
+        FastqSeqResult {
+            id: String::from("id"),
+            desc: String::from("..."),
+            gc: 0.0,
+            n_orfs: 0,
+            is_valid: false,
+            phred_score: 0,
+            seq_len: 0,
+            result_type: String::from("fastq"),
+        }
+    }
 }
 
 fn analyse_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
@@ -29,6 +45,7 @@ fn analyse_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
                 is_valid: rec.check().is_ok(),
                 phred_score: calc_phred_score(rec.qual()),
                 seq_len: rec.seq().len(),
+                ..Default::default()
             });
         } else {
             results.push(FastqSeqResult {

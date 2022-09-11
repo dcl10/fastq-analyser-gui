@@ -156,5 +156,11 @@ mod tests {
 
         let qual_str = b"!!!!";
         assert_eq!(calc_phred_score(qual_str), 0);
+
+        let mut big_qual_str = String::from("####");
+        for i in 0..4999 {
+            big_qual_str.push_str("####");
+        }
+        assert_eq!(calc_phred_score(big_qual_str.as_bytes()), (8 * 5000) as u32)
     }
 }

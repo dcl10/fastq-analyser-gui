@@ -203,7 +203,18 @@ mod tests {
         Ok(())
     }
 
-    fn remove_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
+    fn create_test_fa_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
+        let mut fqs_str: String = ">id description\nATAT\n".to_owned();
+        for i in 2..21 {
+            fqs_str.push_str(format!(">id{} description\nGCGC\n", i).as_str());
+        }
+
+        let mut test_file = std::fs::File::create(path)?;
+        test_file.write_all(fqs_str.as_bytes())?;
+        Ok(())
+    }
+
+    fn remove_test_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
         std::fs::remove_file(path)?;
         Ok(())
     }
@@ -240,7 +251,7 @@ mod tests {
         let test_file_name = std::path::Path::new("test_fastq.fq");
         create_test_fq_file(test_file_name);
         let results = analyse_fastq_file(test_file_name);
-        remove_test_fq_file(test_file_name);
+        remove_test_file(test_file_name);
         assert_eq!(results.len(), 20);
         for result in results {
             assert!(result.is_valid)

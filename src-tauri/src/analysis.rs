@@ -190,7 +190,10 @@ pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
 mod tests {
     use std::io::Write;
 
-    use crate::analysis::{analyse_fastq_file, analyse_fastq_sequences, calc_phred_score};
+    use crate::analysis::{
+        analyse_fasta_file, analyse_fasta_sequences, analyse_fastq_file, analyse_fastq_sequences,
+        calc_phred_score,
+    };
 
     fn create_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
         let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
@@ -251,6 +254,37 @@ mod tests {
         let test_file_name = std::path::Path::new("test_fastq.fq");
         create_test_fq_file(test_file_name);
         let results = analyse_fastq_file(test_file_name);
+        remove_test_file(test_file_name);
+        assert_eq!(results.len(), 20);
+        for result in results {
+            assert!(result.is_valid)
+        }
+    }
+
+    #[test]
+    fn test_analyse_fasta_sequences() {
+        let mut fas_str = ">id description\nATAT\n".to_owned();
+        fas_str.push_str(">id description\nGCGC\n");
+
+        let results = analyse_fasta_sequences(fas_str.as_str());
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_missing_fa_sequence() {
+        let missing_sequence = ">id description\n";
+
+        let results = analyse_fasta_sequences(missing_sequence);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].seq_len, 0);
+        assert!(results[0].is_valid)
+    }
+
+    #[test]
+    fn test_analyse_fasta_file() {
+        let test_file_name = std::path::Path::new("test_fastq.fa");
+        create_test_fa_file(test_file_name);
+        let results = analyse_fasta_file(test_file_name);
         remove_test_file(test_file_name);
         assert_eq!(results.len(), 20);
         for result in results {

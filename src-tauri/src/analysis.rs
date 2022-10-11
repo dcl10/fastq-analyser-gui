@@ -55,7 +55,7 @@ impl Default for FastaSeqResult {
     }
 }
 
-fn analyse_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
+fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
     let mut results = Vec::new();
 
     // Iterate over results and find GC content and ORFs
@@ -106,27 +106,27 @@ fn calc_phred_score(qual: &[u8]) -> u32 {
 }
 
 #[tauri::command]
-pub fn analyse_sequences(sequences: &str) -> Vec<FastqSeqResult> {
+pub fn analyse_fastq_sequences(sequences: &str) -> Vec<FastqSeqResult> {
     let reader = fastq::Reader::new(sequences.as_bytes());
     let records: Vec<fastq::Record> = reader
         .records()
         .map(|rec| rec.unwrap_or_default())
         .collect();
 
-    let results = analyse_records(&records);
+    let results = analyse_fastq_records(&records);
 
     results
 }
 
 #[tauri::command]
-pub fn analyse_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
+pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
     let reader = fastq::Reader::from_file(path).unwrap();
     let records: Vec<fastq::Record> = reader
         .records()
         .map(|rec| rec.unwrap_or_default())
         .collect();
 
-    let results = analyse_records(&records);
+    let results = analyse_fastq_records(&records);
 
     results
 }
@@ -135,7 +135,7 @@ pub fn analyse_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
 mod tests {
     use std::io::Write;
 
-    use crate::analysis::{analyse_file, analyse_sequences, calc_phred_score};
+    use crate::analysis::{analyse_fastq_file, analyse_fastq_sequences, calc_phred_score};
 
     fn create_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
         let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
@@ -158,7 +158,7 @@ mod tests {
         let mut fqs_str = "@id description\nATAT\n+\n!!!!\n".to_owned();
         fqs_str.push_str("@id description\nGCGC\n+\n!!!!\n");
 
-        let results = analyse_sequences(fqs_str.as_str());
+        let results = analyse_fastq_sequences(fqs_str.as_str());
         assert_eq!(results.len(), 2);
     }
 
@@ -166,7 +166,7 @@ mod tests {
     fn test_missing_sequence() {
         let missing_sequence = "@id description\n\n+\n!!!!\n";
 
-        let results = analyse_sequences(missing_sequence);
+        let results = analyse_fastq_sequences(missing_sequence);
         assert_eq!(results.len(), 1);
         assert!(!results[0].is_valid);
     }
@@ -175,7 +175,7 @@ mod tests {
     fn test_missing_quality() {
         let missing_quality = "@id description\nATAT\n+\n\n";
 
-        let results = analyse_sequences(missing_quality);
+        let results = analyse_fastq_sequences(missing_quality);
         assert_eq!(results.len(), 1);
         assert!(!results[0].is_valid);
     }
@@ -184,7 +184,7 @@ mod tests {
     fn test_analyse_file() {
         let test_file_name = std::path::Path::new("test_fastq.fq");
         create_test_fq_file(test_file_name);
-        let results = analyse_file(test_file_name);
+        let results = analyse_fastq_file(test_file_name);
         remove_test_fq_file(test_file_name);
         assert_eq!(results.len(), 20);
         for result in results {

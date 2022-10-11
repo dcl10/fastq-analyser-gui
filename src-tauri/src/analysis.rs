@@ -85,6 +85,35 @@ fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
     results
 }
 
+fn analyse_fasta_records(records: &Vec<fasta::Record>) -> Vec<FastaSeqResult> {
+    let mut results = Vec::new();
+
+    // Iterate over results and find GC content and ORFs
+    for rec in records {
+        if rec.check().is_ok() {
+            let gc_ = gc::gc_content(rec.seq());
+            let n_orfs = find_orfs(rec.seq());
+            results.push(FastaSeqResult {
+                n_orfs,
+                id: rec.id().to_owned(),
+                desc: rec.desc().unwrap_or("").to_owned(),
+                gc: gc_,
+                is_valid: rec.check().is_ok(),
+                seq_len: rec.seq().len(),
+                ..Default::default()
+            });
+        } else {
+            results.push(FastaSeqResult {
+                id: "Invalid Record".to_owned(),
+                is_valid: rec.check().is_ok(),
+                ..Default::default()
+            });
+        }
+    }
+
+    results
+}
+
 fn find_orfs(seq: TextSlice) -> usize {
     // Hyperparameters for finding open reading frames (ORFs).
     // NB: DNA alphabet

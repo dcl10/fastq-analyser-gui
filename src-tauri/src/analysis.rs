@@ -1,5 +1,6 @@
-use bio::io::fastq;
+use bio::io::{fasta, fastq};
 use bio::seq_analysis::{gc, orf};
+use bio::utils::TextSlice;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -61,7 +62,7 @@ fn analyse_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
     for rec in records {
         if rec.check().is_ok() {
             let gc_ = gc::gc_content(rec.seq());
-            let n_orfs = find_orfs(rec);
+            let n_orfs = find_orfs(rec.seq());
             results.push(FastqSeqResult {
                 n_orfs,
                 id: rec.id().to_owned(),
@@ -84,7 +85,7 @@ fn analyse_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
     results
 }
 
-fn find_orfs(rec: &fastq::Record) -> usize {
+fn find_orfs(seq: TextSlice) -> usize {
     // Hyperparameters for finding open reading frames (ORFs).
     // NB: DNA alphabet
     let start_codons = vec![b"ATG"];
@@ -92,7 +93,7 @@ fn find_orfs(rec: &fastq::Record) -> usize {
     let min_len = 50;
     let finder = orf::Finder::new(start_codons, stop_codons, min_len);
 
-    finder.find_all(rec.seq()).count()
+    finder.find_all(seq).count()
 }
 
 fn calc_phred_score(qual: &[u8]) -> u32 {

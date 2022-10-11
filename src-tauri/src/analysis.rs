@@ -220,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn test_analyse_sequences() {
+    fn test_analyse_fastq_sequences() {
         let mut fqs_str = "@id description\nATAT\n+\n!!!!\n".to_owned();
         fqs_str.push_str("@id description\nGCGC\n+\n!!!!\n");
 
@@ -229,7 +229,7 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_sequence() {
+    fn test_missing_fq_sequence() {
         let missing_sequence = "@id description\n\n+\n!!!!\n";
 
         let results = analyse_fastq_sequences(missing_sequence);
@@ -238,7 +238,7 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_quality() {
+    fn test_missing_fq_quality() {
         let missing_quality = "@id description\nATAT\n+\n\n";
 
         let results = analyse_fastq_sequences(missing_quality);
@@ -247,7 +247,7 @@ mod tests {
     }
 
     #[test]
-    fn test_analyse_file() {
+    fn test_analyse_fastq_file() {
         let test_file_name = std::path::Path::new("test_fastq.fq");
         create_test_fq_file(test_file_name);
         let results = analyse_fastq_file(test_file_name);

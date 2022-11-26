@@ -252,9 +252,9 @@ mod tests {
     #[test]
     fn test_analyse_fastq_file() {
         let test_file_name = std::path::Path::new("test_fastq.fq");
-        create_test_fq_file(test_file_name);
+        assert!(create_test_fq_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
-        remove_test_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
         assert_eq!(results.len(), 20);
         for result in results {
             assert!(result.is_valid)
@@ -283,9 +283,9 @@ mod tests {
     #[test]
     fn test_analyse_fasta_file() {
         let test_file_name = std::path::Path::new("test_fastq.fa");
-        create_test_fa_file(test_file_name);
+        assert!(create_test_fa_file(test_file_name).is_ok());
         let results = analyse_fasta_file(test_file_name);
-        remove_test_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
         assert_eq!(results.len(), 20);
         for result in results {
             assert!(result.is_valid)
@@ -301,7 +301,7 @@ mod tests {
         assert_eq!(calc_phred_score(qual_str), 0);
 
         let mut big_qual_str = String::from("####");
-        for i in 0..4999 {
+        for _ in 0..4999 {
             big_qual_str.push_str("####");
         }
         assert_eq!(calc_phred_score(big_qual_str.as_bytes()), (8 * 5000) as u32)

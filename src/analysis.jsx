@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api'
+
 // Send the sequence text to the backend and return the analytics
 const analyseTextSequences = async (sequences, format) => {
     let choice;

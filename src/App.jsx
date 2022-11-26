@@ -46,8 +46,8 @@ function App() {
         multiple: false,
         filters: [
           {
-            name: 'FastQ files',
-            extensions: ['fq', 'fastq']
+            name: 'Sequence files',
+            extensions: ['fq', 'fastq', 'fa', 'fasta']
           }
         ]
       }

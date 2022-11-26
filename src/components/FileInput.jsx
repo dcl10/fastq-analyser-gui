@@ -26,7 +26,7 @@ function FileInput({isInvalid = false, title, onClick, id}) {
           </FormErrorMessage>
         ) : (
           <FormHelperText>
-            Upload a fastq file with DNA sequences.
+            Upload a sequence file with DNA sequences.
           </FormHelperText>
         )
       }

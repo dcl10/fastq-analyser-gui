@@ -106,8 +106,8 @@ function App() {
             <Accordion allowMultiple allowToggle>
               {
                 results.map(
-                  result => (
-                    <AccordionItem>
+                  (result, index) => (
+                    <AccordionItem key={index}>
                       <AccordionButton>
                         <Heading as='h4' size='md'>
                           {result.id}
@@ -116,7 +116,7 @@ function App() {
                         <AccordionIcon />
                       </AccordionButton>
                       <AccordionPanel>
-                        {result.type === "fastq" && 
+                        {result.result_type === "fastq" && 
                           <FastQResultPanel result={result} />
                         }
                       </AccordionPanel>

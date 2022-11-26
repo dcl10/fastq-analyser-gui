@@ -16,7 +16,8 @@ import {
   Box,
 } from '@chakra-ui/react'
 import { open } from '@tauri-apps/api/dialog'
-import FastQResultPanel from './components/FastqResultPanel'
+import FastaResultPanel from './components/FastaResultPanel'
+import FastqResultPanel from './components/FastqResultPanel'
 import FileInput from './components/FileInput'
 import FQModal from './components/FQModal'
 import LoadingIndicator from './components/LoadingIndicator'
@@ -116,8 +117,11 @@ function App() {
                         <AccordionIcon />
                       </AccordionButton>
                       <AccordionPanel>
-                        {result.result_type === "fastq" && 
-                          <FastQResultPanel result={result} />
+                        {result.result_type === "fastq" ? (
+                            <FastqResultPanel result={result} />
+                          ) : (
+                            <FastaResultPanel result={result} />
+                          )
                         }
                       </AccordionPanel>
                     </AccordionItem>

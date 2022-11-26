@@ -1,6 +1,6 @@
 import { Text } from '@chakra-ui/react'
 
-function FastqResultPanel({ result }) {
+function FastaResultPanel({ result }) {
     return (
         <>
             <Text>
@@ -13,9 +13,6 @@ function FastqResultPanel({ result }) {
                 <strong>Sequence length:</strong>&nbsp;{result.seq_len} bases
             </Text>
             <Text>
-                <strong>PHRED score per base:</strong>&nbsp;{result.phred_score / result.seq_len}
-            </Text>
-            <Text>
                 <strong>GC %:</strong>&nbsp;{result.gc * 100}%
             </Text>
             <Text>
@@ -25,4 +22,4 @@ function FastqResultPanel({ result }) {
     )
 }
 
-export default FastqResultPanel
+export default FastaResultPanel

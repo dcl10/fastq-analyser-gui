@@ -15,16 +15,18 @@ import {
   Spacer,
 } from '@chakra-ui/react'
 import { invoke } from '@tauri-apps/api'
+import { open } from '@tauri-apps/api/dialog'
 import FastQResultPanel from './components/FastqResultPanel'
 import FileInput from './components/FileInput'
 import FQModal from './components/FQModal'
 import LoadingIndicator from './components/LoadingIndicator'
 import TextInput from './components/TextInput'
-import { open } from '@tauri-apps/api/dialog'
+import { analyseFileSequences, analyseTextSequences } from './analysis'
 
 function App() {
   const textSequences = useRef('')
   const fileSequences = useRef('')
+  const seqFormat = useRef('')
   const [results, setResults] = useState([])
 
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -66,16 +68,16 @@ function App() {
   }
 
   // Send the text sequences to the backend and return the analytics
-  const analyseTextSequences = async () => {
+  const analyseText = async () => {
     onOpen()
-    let results = await invoke('analyse_sequences', {sequences: textSequences.current})
+    let results = await analyseTextSequences(textSequences.current, seqFormat.current)
     setResults(results)
   }
 
   // Send the file sequences to the backend and return the analytics
-  const analyseFileSequences = async () => {
+  const analyseFile = async () => {
     onOpen()
-    let results = await invoke('analyse_file', {path: fileSequences.current})
+    let results = await analyseFileSequences(fileSequences.current, seqFormat.current)
     setResults(results)
   }
 
@@ -160,9 +162,9 @@ function App() {
               if (textSequences.current && fileSequences.current) {
                 alert('You may only send either text or a file. Not both.')
               } else if (textSequences.current) {
-                analyseTextSequences()
+                analyseText()
               } else if (fileSequences.current) {
-                analyseFileSequences()
+                analyseFile()
               } else {
                 alert('Please give either text or a file.')
               }

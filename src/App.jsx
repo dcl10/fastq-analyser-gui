@@ -13,17 +13,22 @@ import {
   Text,
   useDisclosure,
   Spacer,
+  Box,
 } from '@chakra-ui/react'
-import { invoke } from '@tauri-apps/api'
+import { open } from '@tauri-apps/api/dialog'
+import FastaResultPanel from './components/FastaResultPanel'
+import FastqResultPanel from './components/FastqResultPanel'
 import FileInput from './components/FileInput'
 import FQModal from './components/FQModal'
 import LoadingIndicator from './components/LoadingIndicator'
 import TextInput from './components/TextInput'
-import { open } from '@tauri-apps/api/dialog'
+import { analyseFileSequences, analyseTextSequences } from './analysis'
+import ToggleSwitch from './components/ToggleSwitch'
 
 function App() {
   const textSequences = useRef('')
   const fileSequences = useRef('')
+  const [seqFormat, setSeqFormat] = useState('fastq')
   const [results, setResults] = useState([])
 
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -41,8 +46,8 @@ function App() {
         multiple: false,
         filters: [
           {
-            name: 'FastQ files',
-            extensions: ['fq', 'fastq']
+            name: 'Sequence files',
+            extensions: ['fq', 'fastq', 'fa', 'fasta']
           }
         ]
       }
@@ -51,6 +56,11 @@ function App() {
     let fileInput = document.getElementById('file-input')
     fileInput.value = filePath
     fileSequences.current = filePath
+  }
+
+  // Change the sequence format
+  const handleFormatSwitch = (event) => {
+    setSeqFormat(event.target.value === "fastq" ? "fasta" : "fastq")
   }
 
   // Clear the input fields and reset the state
@@ -65,16 +75,16 @@ function App() {
   }
 
   // Send the text sequences to the backend and return the analytics
-  const analyseTextSequences = async () => {
+  const analyseText = async () => {
     onOpen()
-    let results = await invoke('analyse_sequences', {sequences: textSequences.current})
+    let results = await analyseTextSequences(textSequences.current, seqFormat)
     setResults(results)
   }
 
   // Send the file sequences to the backend and return the analytics
-  const analyseFileSequences = async () => {
+  const analyseFile = async () => {
     onOpen()
-    let results = await invoke('analyse_file', {path: fileSequences.current})
+    let results = await analyseFileSequences(fileSequences.current, seqFormat)
     setResults(results)
   }
 
@@ -97,8 +107,8 @@ function App() {
             <Accordion allowMultiple allowToggle>
               {
                 results.map(
-                  result => (
-                    <AccordionItem>
+                  (result, index) => (
+                    <AccordionItem key={index}>
                       <AccordionButton>
                         <Heading as='h4' size='md'>
                           {result.id}
@@ -107,24 +117,12 @@ function App() {
                         <AccordionIcon />
                       </AccordionButton>
                       <AccordionPanel>
-                        <Text>
-                          <strong>Description:</strong>&nbsp;{result.desc}
-                        </Text>
-                        <Text>
-                          <strong>Record is valid?</strong>&nbsp;{result.is_valid ? 'Yes' : 'No'}
-                        </Text>
-                        <Text>
-                          <strong>Sequence length:</strong>&nbsp;{result.seq_len} bases
-                        </Text>
-                        <Text>
-                          <strong>PHRED score per base:</strong>&nbsp;{result.phred_score / result.seq_len}
-                        </Text>
-                        <Text>
-                          <strong>GC %:</strong>&nbsp;{result.gc * 100}%
-                        </Text>
-                        <Text>
-                          <strong>No.# ORFs:</strong>&nbsp;{result.n_orfs}
-                        </Text>
+                        {result.result_type === "fastq" ? (
+                            <FastqResultPanel result={result} />
+                          ) : (
+                            <FastaResultPanel result={result} />
+                          )
+                        }
                       </AccordionPanel>
                     </AccordionItem>
                   )
@@ -141,6 +139,13 @@ function App() {
 
       <Heading>Fastq Analyser</Heading>
       {/* The input options */}
+      <ToggleSwitch
+        id={"format-switch"}
+        title={"Sequence type:"}
+        value={seqFormat}
+        onChange={handleFormatSwitch}
+        isChecked={seqFormat === "fastq"}
+      />
       <Accordion allowMultiple allowToggle>
         <AccordionItem>
           <AccordionButton>
@@ -174,9 +179,9 @@ function App() {
               if (textSequences.current && fileSequences.current) {
                 alert('You may only send either text or a file. Not both.')
               } else if (textSequences.current) {
-                analyseTextSequences()
+                analyseText()
               } else if (fileSequences.current) {
-                analyseFileSequences()
+                analyseFile()
               } else {
                 alert('Please give either text or a file.')
               }

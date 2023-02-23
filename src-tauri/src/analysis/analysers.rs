@@ -1,8 +1,7 @@
+use crate::models::{FastaSeqResult, FastqSeqResult};
 use bio::io::{fasta, fastq};
 use bio::seq_analysis::{gc, orf};
 use bio::utils::TextSlice;
-use crate::models::{FastaSeqResult, FastqSeqResult};
-
 
 pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
     let mut results = Vec::new();
@@ -85,5 +84,11 @@ fn calc_phred_score(qual: &[u8]) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    
+    use super::calc_phred_score;
+
+    #[test]
+    fn test_cal_phred_score() {
+        assert_eq!(calc_phred_score(b"!!!"), 0);
+        assert_eq!(calc_phred_score(b"*+"), 19)
+    }
 }

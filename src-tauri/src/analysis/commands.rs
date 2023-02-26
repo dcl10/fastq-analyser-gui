@@ -1,4 +1,9 @@
+use std::fs::File;
+use std::io::BufReader;
+
+use bio::io::fasta::Reader;
 use bio::io::{fasta, fastq};
+use flate2::read::{GzDecoder};
 use crate::analysis::analysers::{analyse_fastq_records, analyse_fasta_records};
 use crate::models::{FastaSeqResult, FastqSeqResult};
 
@@ -31,7 +36,7 @@ pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
 
 #[tauri::command]
 pub fn analyse_fasta_sequences(sequences: &str) -> Vec<FastaSeqResult> {
-    let reader = fasta::Reader::new(sequences.as_bytes());
+    let reader = Reader::new(sequences.as_bytes());
     let records: Vec<fasta::Record> = reader
         .records()
         .map(|rec| rec.unwrap_or_default())
@@ -44,7 +49,7 @@ pub fn analyse_fasta_sequences(sequences: &str) -> Vec<FastaSeqResult> {
 
 #[tauri::command]
 pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
-    let reader = fasta::Reader::from_file(path).unwrap();
+    let reader = Reader::from_file(path).unwrap();
     let records: Vec<fasta::Record> = reader
         .records()
         .map(|rec| rec.unwrap_or_default())
@@ -53,6 +58,16 @@ pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
     let results = analyse_fasta_records(&records);
 
     results
+}
+
+fn read_fasta(path: &std::path::Path) -> Reader<BufReader<File>>{
+    if path.ends_with(".gz") {
+        let gzip_file = File::open(path).unwrap();
+        let decoder = GzDecoder::new(gzip_file);
+        return fasta::Reader::new(decoder.into_inner());
+    } else {
+        return Reader::from_file(path).unwrap()
+    }
 }
 
 

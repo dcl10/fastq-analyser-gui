@@ -1,9 +1,6 @@
-use std::fs::File;
-use std::io::BufReader;
-
 use bio::io::{fasta, fastq};
-use flate2::read::{GzDecoder};
 use crate::analysis::analysers::{analyse_fastq_records, analyse_fasta_records};
+use crate::io::{read_fasta, read_fastq};
 use crate::models::{FastaSeqResult, FastqSeqResult};
 
 
@@ -58,27 +55,6 @@ pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
 
     results
 }
-
-fn read_fasta(path: &std::path::Path) -> fasta::Reader<BufReader<File>>{
-    if path.ends_with(".gz") {
-        let gzip_file = File::open(path).unwrap();
-        let decoder = GzDecoder::new(gzip_file);
-        return fasta::Reader::new(decoder.into_inner());
-    } else {
-        return fasta::Reader::from_file(path).unwrap()
-    }
-}
-
-fn read_fastq(path: &std::path::Path) -> fastq::Reader<BufReader<File>>{
-    if path.ends_with(".gz") {
-        let gzip_file = File::open(path).unwrap();
-        let decoder = GzDecoder::new(gzip_file);
-        return fastq::Reader::new(decoder.into_inner());
-    } else {
-        return fastq::Reader::from_file(path).unwrap()
-    }
-}
-
 
 #[cfg(test)]
 mod tests {

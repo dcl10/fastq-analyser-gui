@@ -5,6 +5,7 @@
 
 mod models;
 mod analysis;
+mod io;
 
 fn main() {
     tauri::Builder::default()

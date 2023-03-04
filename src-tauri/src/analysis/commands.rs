@@ -35,7 +35,7 @@ pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
 
 #[tauri::command]
 pub fn analyse_fasta_sequences(sequences: &str) -> Vec<FastaSeqResult> {
-    let reader = Reader::new(sequences.as_bytes());
+    let reader = fasta::Reader::new(sequences.as_bytes());
     let records: Vec<fasta::Record> = reader
         .records()
         .map(|rec| rec.unwrap_or_default())
@@ -48,7 +48,7 @@ pub fn analyse_fasta_sequences(sequences: &str) -> Vec<FastaSeqResult> {
 
 #[tauri::command]
 pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
-    let reader = Reader::from_file(path).unwrap();
+    let reader = fasta::Reader::from_file(path).unwrap();
     let records: Vec<fasta::Record> = reader
         .records()
         .map(|rec| rec.unwrap_or_default())

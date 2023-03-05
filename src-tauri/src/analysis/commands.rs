@@ -146,9 +146,13 @@ mod tests {
     #[test]
     fn test_analyse_fastq_file_zipped() {
         let test_file_name = std::path::Path::new("test_fastq.fq.gz");
+        let test_file_unpacked = std::path::Path::new("test_fastq.fq");
         assert!(create_test_fqgz_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
+        if test_file_unpacked.exists() {
+            assert!(remove_test_file(test_file_unpacked).is_ok());
+        }
         assert_eq!(results.len(), 20);
         for result in results {
             assert!(result.is_valid)

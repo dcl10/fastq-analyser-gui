@@ -1,8 +1,7 @@
-use bio::io::{fasta, fastq};
-use crate::analysis::analysers::{analyse_fastq_records, analyse_fasta_records};
+use crate::analysis::analysers::{analyse_fasta_records, analyse_fastq_records};
 use crate::io::{read_fasta, read_fastq};
 use crate::models::{FastaSeqResult, FastqSeqResult};
-
+use bio::io::{fasta, fastq};
 
 #[tauri::command]
 pub fn analyse_fastq_sequences(sequences: &str) -> Vec<FastqSeqResult> {
@@ -20,10 +19,7 @@ pub fn analyse_fastq_sequences(sequences: &str) -> Vec<FastqSeqResult> {
 #[tauri::command]
 pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
     let reader = read_fastq(path);
-    let records: Vec<fastq::Record> = reader
-        .records()
-        .map(|rec| rec.unwrap_or_default())
-        .collect();
+    let records: Vec<fastq::Record> = reader.records().map(|rec| rec.unwrap()).collect();
 
     let results = analyse_fastq_records(&records);
 
@@ -58,11 +54,13 @@ pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
     use flate2::write::GzEncoder;
     use flate2::Compression;
+    use std::io::Write;
 
-    use crate::analysis::commands::{analyse_fastq_sequences, analyse_fastq_file, analyse_fasta_sequences, analyse_fasta_file};
+    use crate::analysis::commands::{
+        analyse_fasta_file, analyse_fasta_sequences, analyse_fastq_file, analyse_fastq_sequences,
+    };
 
     fn create_test_fq_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
         let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();

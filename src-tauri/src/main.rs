@@ -3,9 +3,9 @@
     windows_subsystem = "windows"
 )]
 
-mod models;
 mod analysis;
 mod io;
+mod models;
 
 fn main() {
     tauri::Builder::default()

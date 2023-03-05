@@ -19,7 +19,10 @@ pub fn analyse_fastq_sequences(sequences: &str) -> Vec<FastqSeqResult> {
 #[tauri::command]
 pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
     let reader = read_fastq(path);
-    let records: Vec<fastq::Record> = reader.records().map(|rec| rec.unwrap()).collect();
+    let records: Vec<fastq::Record> = reader
+        .records()
+        .map(|rec| rec.unwrap_or_default())
+        .collect();
 
     let results = analyse_fastq_records(&records);
 

@@ -59,6 +59,8 @@ pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
 #[cfg(test)]
 mod tests {
     use std::io::Write;
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
 
     use crate::analysis::commands::{analyse_fastq_sequences, analyse_fastq_file, analyse_fasta_sequences, analyse_fasta_file};
 
@@ -70,6 +72,18 @@ mod tests {
 
         let mut test_file = std::fs::File::create(path)?;
         test_file.write_all(fqs_str.as_bytes())?;
+        Ok(())
+    }
+
+    fn create_test_fqgz_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
+        let mut fqs_str: String = "@id description\nATAT\n+\n!!!!\n".to_owned();
+        for i in 2..21 {
+            fqs_str.push_str(format!("@id{} description\nGCGC\n+\n!!!!\n", i).as_str());
+        }
+
+        let test_file = std::fs::File::create(path)?;
+        let mut encoder = GzEncoder::new(test_file, Compression::default());
+        encoder.write_all(fqs_str.as_bytes())?;
         Ok(())
     }
 
@@ -120,6 +134,18 @@ mod tests {
     fn test_analyse_fastq_file() {
         let test_file_name = std::path::Path::new("test_fastq.fq");
         assert!(create_test_fq_file(test_file_name).is_ok());
+        let results = analyse_fastq_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
+        assert_eq!(results.len(), 20);
+        for result in results {
+            assert!(result.is_valid)
+        }
+    }
+
+    #[test]
+    fn test_analyse_fastq_file_zipped() {
+        let test_file_name = std::path::Path::new("test_fastq.fq.gz");
+        assert!(create_test_fqgz_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
         assert_eq!(results.len(), 20);

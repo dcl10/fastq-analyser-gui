@@ -5,10 +5,10 @@ use std::io::{BufReader, Read, Write};
 use std::path::Path;
 
 pub fn read_fasta(path: &Path) -> fasta::Reader<BufReader<File>> {
-    if path.ends_with(".gz") {
-        let gzip_file = File::open(path).unwrap();
-        let decoder = GzDecoder::new(gzip_file);
-        return fasta::Reader::new(decoder.into_inner());
+    let path_str = path.as_os_str().to_str().unwrap();
+    if path_str.ends_with(".gz") {
+        let extracted_gz_path = extract_gzip(path);
+        return fasta::Reader::from_file(extracted_gz_path).unwrap();
     } else {
         return fasta::Reader::from_file(path).unwrap();
     }

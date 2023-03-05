@@ -99,6 +99,18 @@ mod tests {
         Ok(())
     }
 
+    fn create_test_fagz_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
+        let mut fqs_str: String = ">id description\nATAT\n".to_owned();
+        for i in 2..21 {
+            fqs_str.push_str(format!(">id{} description\nGCGC\n", i).as_str());
+        }
+
+        let test_file = std::fs::File::create(path)?;
+        let mut encoder = GzEncoder::new(test_file, Compression::default());
+        encoder.write_all(fqs_str.as_bytes())?;
+        Ok(())
+    }
+
     fn remove_test_file<'a>(path: &'a std::path::Path) -> std::io::Result<()> {
         std::fs::remove_file(path)?;
         Ok(())
@@ -184,6 +196,22 @@ mod tests {
         assert!(create_test_fa_file(test_file_name).is_ok());
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
+        assert_eq!(results.len(), 20);
+        for result in results {
+            assert!(result.is_valid)
+        }
+    }
+
+    #[test]
+    fn test_analyse_fasta_file_zipped() {
+        let test_file_name = std::path::Path::new("test_fasta.fa.gz");
+        let test_file_unpacked = std::path::Path::new("test_fasta.fa");
+        assert!(create_test_fagz_file(test_file_name).is_ok());
+        let results = analyse_fasta_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
+        if test_file_unpacked.exists() {
+            assert!(remove_test_file(test_file_unpacked).is_ok());
+        }
         assert_eq!(results.len(), 20);
         for result in results {
             assert!(result.is_valid)

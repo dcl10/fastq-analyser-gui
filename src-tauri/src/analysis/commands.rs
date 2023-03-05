@@ -24,6 +24,14 @@ pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
         .map(|rec| rec.unwrap_or_default())
         .collect();
 
+    let path_str = path.to_str().unwrap();
+    if path_str.ends_with(".gz") {
+        let unpacked = path_str.replace(".gz", "");
+        match std::fs::remove_file(unpacked) {
+            Ok(_) => (),
+            Err(_) => (),
+        }
+    }
     let results = analyse_fastq_records(&records);
 
     results
@@ -50,6 +58,14 @@ pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
         .map(|rec| rec.unwrap_or_default())
         .collect();
 
+    let path_str = path.to_str().unwrap();
+    if path_str.ends_with(".gz") {
+        let unpacked = path_str.replace(".gz", "");
+        match std::fs::remove_file(unpacked) {
+            Ok(_) => (),
+            Err(_) => (),
+        }
+    }
     let results = analyse_fasta_records(&records);
 
     results
@@ -162,9 +178,7 @@ mod tests {
         assert!(create_test_fqgz_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
-        if test_file_unpacked.exists() {
-            assert!(remove_test_file(test_file_unpacked).is_ok());
-        }
+        assert!(!test_file_unpacked.exists());
         assert_eq!(results.len(), 20);
         for result in results {
             assert!(result.is_valid)
@@ -209,9 +223,7 @@ mod tests {
         assert!(create_test_fagz_file(test_file_name).is_ok());
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
-        if test_file_unpacked.exists() {
-            assert!(remove_test_file(test_file_unpacked).is_ok());
-        }
+        assert!(!test_file_unpacked.exists());
         assert_eq!(results.len(), 20);
         for result in results {
             assert!(result.is_valid)

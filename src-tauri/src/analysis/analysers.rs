@@ -87,7 +87,7 @@ mod tests {
     use super::calc_phred_score;
 
     #[test]
-    fn test_cal_phred_score() {
+    fn test_calc_phred_score() {
         assert_eq!(calc_phred_score(b"!!!"), 0);
         assert_eq!(calc_phred_score(b"*+"), 19)
     }

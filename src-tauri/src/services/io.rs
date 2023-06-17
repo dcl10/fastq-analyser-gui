@@ -2,7 +2,7 @@ use bio::io::{fasta, fastq};
 use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::ErrorKind::InvalidData;
+use std::io::ErrorKind::{InvalidData, InvalidInput, NotFound};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
@@ -53,7 +53,21 @@ pub fn load_results<'a, T>(source: &Path) -> Result<Vec<T>, std::io::Error>
 where
     T: Deserialize<'a>,
 {
-    todo!();
+    if !source.exists() {
+        return Err(std::io::Error::new(
+            NotFound,
+            format!("{} does not exist.", source.display()),
+        ));
+    }
+
+    if source.is_dir() {
+        return Err(std::io::Error::new(
+            InvalidInput,
+            format!("{} is a directory.", source.display()),
+        ));
+    }
+
+    todo!()
 }
 
 fn extract_gzip(path: &Path) -> String {
@@ -73,7 +87,7 @@ mod tests {
     use crate::models::{FastaSeqResult, FastqSeqResult};
     use uuid::Uuid;
 
-    use super::save_results;
+    use super::{load_results, save_results};
 
     #[test]
     fn test_save_results_saves_fastq_seq_result_to_dest() {
@@ -162,8 +176,25 @@ mod tests {
     #[test]
     fn test_load_results_errors_on_nonexistent_results_file() {
         // Arrange
+        let results_dir = tauri::api::path::desktop_dir().unwrap();
+        let results_file = results_dir.join(Uuid::new_v4().to_string() + ".json");
+
         // Act
+        let result_action = load_results::<FastqSeqResult>(results_file.as_path());
+
         // Assert
-        // Clean up
+        assert!(result_action.is_err())
+    }
+
+    #[test]
+    fn test_load_results_errors_on_source_is_dir() {
+        // Arrange
+        let results_dir = tauri::api::path::desktop_dir().unwrap();
+
+        // Act
+        let result_action = load_results::<FastqSeqResult>(results_dir.as_path());
+
+        // Assert
+        assert!(result_action.is_err())
     }
 }

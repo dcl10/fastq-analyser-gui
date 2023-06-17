@@ -1,6 +1,6 @@
 use crate::analysis::analysers::{analyse_fasta_records, analyse_fastq_records};
-use crate::io::{read_fasta, read_fastq};
 use crate::models::{FastaSeqResult, FastqSeqResult};
+use crate::services::io::{read_fasta, read_fastq};
 use bio::io::{fasta, fastq};
 
 #[tauri::command]

@@ -4,8 +4,8 @@
 )]
 
 mod analysis;
-mod io;
 mod models;
+mod services;
 
 fn main() {
     tauri::Builder::default()

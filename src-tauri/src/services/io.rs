@@ -134,4 +134,36 @@ mod tests {
         // Clean up
         assert!(std::fs::remove_file(save_dest).is_err());
     }
+
+    #[test]
+    fn test_load_results_loads_vec_of_fastq_seq_results() {
+        // Arrange
+        // Act
+        // Assert
+        // Clean up
+    }
+
+    #[test]
+    fn test_load_results_loads_vec_of_fasta_seq_results() {
+        // Arrange
+        // Act
+        // Assert
+        // Clean up
+    }
+
+    #[test]
+    fn test_load_results_errors_with_mixed_fastq_and_fasta_seq_results() {
+        // Arrange
+        // Act
+        // Assert
+        // Clean up
+    }
+
+    #[test]
+    fn test_load_results_errors_on_nonexistent_results_file() {
+        // Arrange
+        // Act
+        // Assert
+        // Clean up
+    }
 }

@@ -1,6 +1,6 @@
 use bio::io::{fasta, fastq};
 use flate2::read::GzDecoder;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::ErrorKind::InvalidData;
 use std::io::{BufReader, BufWriter, Read, Write};
@@ -32,7 +32,7 @@ where
 {
     let serialised_results = serde_json::to_string_pretty(results);
     if serialised_results.is_err() {
-        return Err(std::io::Error::new(InvalidData, "Could not save results.s"));
+        return Err(std::io::Error::new(InvalidData, "Could not save results."));
     }
     // binding prevents "drop of value while in use" warning
     let binding = String::from(serialised_results.unwrap());
@@ -47,6 +47,13 @@ where
         }
         Err(error) => return Err(error),
     }
+}
+
+pub fn load_results<'a, T>(source: &Path) -> Result<Vec<T>, std::io::Error>
+where
+    T: Deserialize<'a>,
+{
+    todo!();
 }
 
 fn extract_gzip(path: &Path) -> String {

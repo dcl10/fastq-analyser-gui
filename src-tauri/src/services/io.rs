@@ -82,7 +82,10 @@ mod tests {
 
         // Assert
         assert!(save_action.is_ok());
-        assert!(save_dest.exists())
+        assert!(save_dest.exists());
+
+        // Clean up
+        assert!(std::fs::remove_file(save_dest).is_ok());
     }
 
     #[test]
@@ -98,7 +101,10 @@ mod tests {
 
         // Assert
         assert!(save_action.is_ok());
-        assert!(save_dest.exists())
+        assert!(save_dest.exists());
+
+        // Clean up
+        assert!(std::fs::remove_file(save_dest).is_ok());
     }
 
     #[test]
@@ -116,6 +122,9 @@ mod tests {
 
         // Assert
         assert!(save_action.is_err());
-        assert!(!save_dest.exists())
+        assert!(!save_dest.exists());
+
+        // Clean up
+        assert!(std::fs::remove_file(save_dest).is_err());
     }
 }

@@ -77,13 +77,15 @@ where
     }
 
     let results = serde_json::from_reader::<File, Vec<T>>(results_file.unwrap());
-    if results.is_ok() {
-        return Ok(results.unwrap());
+    match results {
+        Ok(res) => return Ok(res),
+        Err(_) => {
+            return Err(IOError::new(
+                Other,
+                format!("Could not parse results from {}", source.display()),
+            ))
+        }
     }
-    Err(IOError::new(
-        Other,
-        format!("Could not parse results from {}", source.display()),
-    ))
 }
 
 fn extract_gzip(path: &Path) -> String {

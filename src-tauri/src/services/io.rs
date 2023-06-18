@@ -1,9 +1,10 @@
 use bio::io::{fasta, fastq};
 use flate2::read::GzDecoder;
-use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::fs::File;
-use std::io::ErrorKind::{InvalidData, InvalidInput, NotFound};
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::ErrorKind::{InvalidData, InvalidInput, NotFound, Other};
+use std::io::{BufReader, BufWriter, Error as IOError, Read, Write};
 use std::path::Path;
 
 pub fn read_fasta(path: &Path) -> fasta::Reader<BufReader<File>> {
@@ -26,7 +27,7 @@ pub fn read_fastq(path: &Path) -> fastq::Reader<BufReader<File>> {
     }
 }
 
-pub fn save_results<T>(results: &Vec<T>, dest: &Path) -> Result<(), std::io::Error>
+pub fn save_results<T>(results: &Vec<T>, dest: &Path) -> Result<(), IOError>
 where
     T: Serialize,
 {
@@ -49,25 +50,40 @@ where
     }
 }
 
-pub fn load_results<'a, T>(source: &Path) -> Result<Vec<T>, std::io::Error>
+pub fn load_results<T>(source: &Path) -> Result<Vec<T>, IOError>
 where
-    T: Deserialize<'a>,
+    T: DeserializeOwned,
 {
     if !source.exists() {
-        return Err(std::io::Error::new(
+        return Err(IOError::new(
             NotFound,
             format!("{} does not exist.", source.display()),
         ));
     }
 
     if source.is_dir() {
-        return Err(std::io::Error::new(
+        return Err(IOError::new(
             InvalidInput,
             format!("{} is a directory.", source.display()),
         ));
     }
 
-    todo!()
+    let results_file = File::open(source);
+    if results_file.is_err() {
+        return Err(IOError::new(
+            Other,
+            format!("Could not read {}", source.display()),
+        ));
+    }
+
+    let results = serde_json::from_reader::<File, Vec<T>>(results_file.unwrap());
+    if results.is_ok() {
+        return Ok(results.unwrap());
+    }
+    Err(IOError::new(
+        Other,
+        format!("Could not parse results from {}", source.display()),
+    ))
 }
 
 fn extract_gzip(path: &Path) -> String {

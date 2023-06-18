@@ -84,6 +84,8 @@ fn extract_gzip(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+
     use crate::models::{FastaSeqResult, FastqSeqResult};
     use uuid::Uuid;
 
@@ -152,25 +154,61 @@ mod tests {
     #[test]
     fn test_load_results_loads_vec_of_fastq_seq_results() {
         // Arrange
+        let expected_results = vec![
+            FastqSeqResult::default(),
+            FastqSeqResult::default(),
+            FastqSeqResult::default(),
+        ];
+        let save_dir = tauri::api::path::desktop_dir().unwrap();
+        let save_file = Uuid::new_v4().to_string() + ".json";
+        let save_dest = save_dir.join(save_file);
+        let writer = File::create(save_dest.as_path()).unwrap();
+        serde_json::to_writer_pretty(writer, &expected_results)
+            .expect("Couldn't save results for the test.");
+
         // Act
+        let results = load_results::<FastqSeqResult>(save_dest.as_path());
+
         // Assert
+        assert!(results.is_ok());
+        let results = results.unwrap();
+        assert_eq!(expected_results.len(), results.len());
+        for i in 0..expected_results.len() {
+            assert_eq!(expected_results[i], results[i]);
+        }
+
         // Clean up
+        assert!(std::fs::remove_file(save_dest).is_ok());
     }
 
     #[test]
     fn test_load_results_loads_vec_of_fasta_seq_results() {
         // Arrange
-        // Act
-        // Assert
-        // Clean up
-    }
+        let expected_results = vec![
+            FastaSeqResult::default(),
+            FastaSeqResult::default(),
+            FastaSeqResult::default(),
+        ];
+        let save_dir = tauri::api::path::desktop_dir().unwrap();
+        let save_file = Uuid::new_v4().to_string() + ".json";
+        let save_dest = save_dir.join(save_file);
+        let writer = File::create(save_dest.as_path()).unwrap();
+        serde_json::to_writer_pretty(writer, &expected_results)
+            .expect("Couldn't save results for the test.");
 
-    #[test]
-    fn test_load_results_errors_with_mixed_fastq_and_fasta_seq_results() {
-        // Arrange
         // Act
+        let results = load_results::<FastaSeqResult>(save_dest.as_path());
+
         // Assert
+        assert!(results.is_ok());
+        let results = results.unwrap();
+        assert_eq!(expected_results.len(), results.len());
+        for i in 0..expected_results.len() {
+            assert_eq!(expected_results[i], results[i]);
+        }
+
         // Clean up
+        assert!(std::fs::remove_file(save_dest).is_ok());
     }
 
     #[test]

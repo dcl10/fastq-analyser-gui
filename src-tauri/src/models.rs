@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, PartialOrd)]
 pub struct FastqSeqResult {
     pub id: String,
     pub desc: String,
@@ -27,7 +27,7 @@ impl Default for FastqSeqResult {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, PartialOrd)]
 pub struct FastaSeqResult {
     pub id: String,
     pub desc: String,

@@ -41,13 +41,7 @@ jobs:
           workspaces: src-tauri
 
       - name: install frontend dependencies
-        # `npm ci` fails here with "Missing: @emnapi/runtime@1.11.3 from
-        # lock file" — @tailwindcss/oxide-wasm32-wasi lists @emnapi/* as
-        # bundleDependencies, which npm's lockfile v3 doesn't resolve
-        # consistently across platforms (reproduces even with a lockfile
-        # freshly regenerated via `npm install`). `npm install` reconciles
-        # instead of hard-failing, so it sidesteps the bug.
-        run: npm install
+        run: npm ci
 
       - name: lint frontend
         run: npm run lint

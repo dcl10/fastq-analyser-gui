@@ -7,10 +7,6 @@ a file (optionally gzip-compressed), and the app reports per-record statistics: 
 count, sequence length, validity, and — for FASTQ — a Phred quality score. Results can be saved to and reloaded from
 JSON.
 
-The project is currently being resurrected after a period of inactivity. The frontend (Vite + React + Chakra UI) and
-the Tauri v1 shell are both slated for replacement — see open GitHub issues for the Tauri v2 upgrade / Next.js
-migration before assuming the structure below is final.
-
 ## Build & Test
 
 Frontend (from repo root):

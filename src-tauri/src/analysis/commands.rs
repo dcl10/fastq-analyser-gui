@@ -76,6 +76,7 @@ mod tests {
     use flate2::write::GzEncoder;
     use flate2::Compression;
     use std::io::Write;
+    use uuid::Uuid;
 
     use crate::analysis::commands::{
         analyse_fasta_file, analyse_fasta_sequences, analyse_fastq_file, analyse_fastq_sequences,
@@ -161,7 +162,9 @@ mod tests {
 
     #[test]
     fn test_analyse_fastq_file() {
-        let test_file_name = std::path::Path::new("test_fastq.fq");
+        // Unique per test run so parallel tests can't collide on the same file.
+        let file_name = format!("test_fastq_{}.fq", Uuid::new_v4());
+        let test_file_name = std::path::Path::new(&file_name);
         assert!(create_test_fq_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
@@ -173,8 +176,10 @@ mod tests {
 
     #[test]
     fn test_analyse_fastq_file_zipped() {
-        let test_file_name = std::path::Path::new("test_fastq.fq.gz");
-        let test_file_unpacked = std::path::Path::new("test_fastq.fq");
+        let file_name = format!("test_fastq_{}.fq.gz", Uuid::new_v4());
+        let unpacked_file_name = file_name.replace(".gz", "");
+        let test_file_name = std::path::Path::new(&file_name);
+        let test_file_unpacked = std::path::Path::new(&unpacked_file_name);
         assert!(create_test_fqgz_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
@@ -206,7 +211,8 @@ mod tests {
 
     #[test]
     fn test_analyse_fasta_file() {
-        let test_file_name = std::path::Path::new("test_fastq.fa");
+        let file_name = format!("test_fasta_{}.fa", Uuid::new_v4());
+        let test_file_name = std::path::Path::new(&file_name);
         assert!(create_test_fa_file(test_file_name).is_ok());
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
@@ -218,8 +224,10 @@ mod tests {
 
     #[test]
     fn test_analyse_fasta_file_zipped() {
-        let test_file_name = std::path::Path::new("test_fasta.fa.gz");
-        let test_file_unpacked = std::path::Path::new("test_fasta.fa");
+        let file_name = format!("test_fasta_{}.fa.gz", Uuid::new_v4());
+        let unpacked_file_name = file_name.replace(".gz", "");
+        let test_file_name = std::path::Path::new(&file_name);
+        let test_file_unpacked = std::path::Path::new(&unpacked_file_name);
         assert!(create_test_fagz_file(test_file_name).is_ok());
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());

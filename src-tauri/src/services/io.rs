@@ -113,7 +113,7 @@ mod tests {
     fn test_save_results_saves_fastq_seq_result_to_dest() {
         // Arrange
         let results = Vec::from_iter([FastqSeqResult::default()]);
-        let save_dir = tauri::api::path::desktop_dir().unwrap();
+        let save_dir = std::env::temp_dir();
         let save_file = Uuid::new_v4().to_string() + ".json";
         let save_dest = save_dir.join(save_file);
         println!("{}", save_dest.to_str().unwrap());
@@ -133,7 +133,7 @@ mod tests {
     fn test_save_results_saves_fasta_seq_resultt_to_dest() {
         // Arrange
         let results = Vec::from_iter([FastaSeqResult::default()]);
-        let save_dir = tauri::api::path::desktop_dir().unwrap();
+        let save_dir = std::env::temp_dir();
         let save_file = Uuid::new_v4().to_string() + ".json";
         let save_dest = save_dir.join(save_file);
 
@@ -152,9 +152,7 @@ mod tests {
     fn test_save_results_errors_on_nonexistent_dest() {
         // Arrange
         let results = Vec::from_iter([FastqSeqResult::default()]);
-        let save_dir = tauri::api::path::desktop_dir()
-            .unwrap()
-            .join(Uuid::new_v4().to_string());
+        let save_dir = std::env::temp_dir().join(Uuid::new_v4().to_string());
         let save_file = Uuid::new_v4().to_string() + ".json";
         let save_dest = save_dir.join(save_file);
 
@@ -177,7 +175,7 @@ mod tests {
             FastqSeqResult::default(),
             FastqSeqResult::default(),
         ];
-        let save_dir = tauri::api::path::desktop_dir().unwrap();
+        let save_dir = std::env::temp_dir();
         let save_file = Uuid::new_v4().to_string() + ".json";
         let save_dest = save_dir.join(save_file);
         let writer = File::create(save_dest.as_path()).unwrap();
@@ -207,7 +205,7 @@ mod tests {
             FastaSeqResult::default(),
             FastaSeqResult::default(),
         ];
-        let save_dir = tauri::api::path::desktop_dir().unwrap();
+        let save_dir = std::env::temp_dir();
         let save_file = Uuid::new_v4().to_string() + ".json";
         let save_dest = save_dir.join(save_file);
         let writer = File::create(save_dest.as_path()).unwrap();
@@ -232,7 +230,7 @@ mod tests {
     #[test]
     fn test_load_results_errors_on_nonexistent_results_file() {
         // Arrange
-        let results_dir = tauri::api::path::desktop_dir().unwrap();
+        let results_dir = std::env::temp_dir();
         let results_file = results_dir.join(Uuid::new_v4().to_string() + ".json");
 
         // Act
@@ -245,7 +243,7 @@ mod tests {
     #[test]
     fn test_load_results_errors_on_source_is_dir() {
         // Arrange
-        let results_dir = tauri::api::path::desktop_dir().unwrap();
+        let results_dir = std::env::temp_dir();
 
         // Act
         let result_action = load_results::<FastqSeqResult>(results_dir.as_path());

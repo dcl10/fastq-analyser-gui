@@ -13,9 +13,10 @@ Frontend (from repo root):
 
 ```bash
 npm install
-npm run dev          # vite dev server only
+npm run dev          # next.js dev server only
 npm run tauri dev    # full Tauri app in dev mode
-npm run tauri build  # production build
+npm run tauri build  # production build (static export + Rust release build + bundling)
+npm run lint         # eslint
 ```
 
 Backend (from `src-tauri/`):
@@ -25,19 +26,31 @@ cargo build
 cargo test
 ```
 
-CI currently builds release binaries on push to a `release` branch via `.github/workflows/build_for_release.yml`.
-There is no PR-triggered test workflow yet (tracked in an open issue).
+CI: `.github/workflows/build_for_release.yml` predates the Tauri v2 migration and needs reworking into a manual
+(`workflow_dispatch`) release workflow before it's usable again (tracked in an open issue). A `build_and_test`
+workflow running backend `cargo build`/`cargo test` on PRs into `main` is tracked separately; add a frontend
+`next build`/`npm run lint` step to it once this frontend exists.
 
 ## Architecture
 
 ```
-src/                          # React frontend (Vite + Chakra UI)
-├── App.jsx                   # top-level layout; owns text/file input and results state
-├── analysis.jsx              # invoke() wrappers calling into the Tauri commands below
-└── components/                # Chakra UI components (inputs, modal, result panels, toggle)
+src/
+├── app/
+│   ├── layout.tsx             # root layout, fonts, metadata
+│   └── page.tsx                # thin server component rendering FastqAnalyserApp
+├── components/
+│   ├── fastq-analyser-app.tsx  # 'use client' — owns text/file input and results state (was App.jsx)
+│   ├── file-input.tsx, text-input.tsx, format-toggle.tsx, loading-indicator.tsx,
+│   │   results-dialog.tsx, fasta-result-panel.tsx, fastq-result-panel.tsx
+│   └── ui/                      # shadcn/ui primitives (button, dialog, accordion, input, textarea, switch, label)
+├── lib/
+│   ├── analysis.ts             # invoke() wrappers calling into the Tauri commands below (was analysis.jsx)
+│   └── utils.ts                  # shadcn's `cn()` class-merging helper
+└── types/
+    └── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs
 
 src-tauri/src/
-├── main.rs                   # registers the #[tauri::command] handlers below
+├── main.rs / lib.rs           # registers the #[tauri::command] handlers below, plugins (dialog, log)
 ├── models.rs                  # FastqSeqResult / FastaSeqResult (serde structs)
 ├── analysis/
 │   ├── analysers.rs           # analyse_fastq_records / analyse_fasta_records — GC%, ORF count, Phred score
@@ -45,6 +58,12 @@ src-tauri/src/
 └── services/
     └── io.rs                   # file readers (transparent .gz extraction), save_results / load_results (JSON)
 ```
+
+Tauri bundles a static frontend — no Node server ships in the app. `next.config.ts` sets `output: "export"` so
+`next build` emits a static `out/` directory that `tauri.conf.json`'s `frontendDist` points at. This rules out
+Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::command]`s invoked from the client.
+`next.config.ts` also sets `agentRules: false` — otherwise `next dev`/`next build` injects its own block into
+`AGENTS.md` on every run, which would fight the hand-written file kept identical to `CLAUDE.md` here.
 
 ## Key Types
 
@@ -70,8 +89,11 @@ Rust (`src-tauri`):
   `analysers.rs` or `services/`
 
 Frontend (`src`):
-- Function components with hooks (`useState`/`useRef`) — no class components
-- Chakra UI for all UI elements, pending the frontend migration decision
+- TypeScript function components with hooks (`useState`/`useRef`) — no class components
+- Tailwind CSS + shadcn/ui for UI elements; add new primitives with `npx shadcn@latest add <component>` rather than
+  hand-rolling them
+- Keep generated `src/components/ui/*` files as shadcn produces them — customize via `className`/Tailwind at the
+  call site, not by hand-editing the primitives
 
 ## Development Workflow
 
@@ -111,5 +133,8 @@ Backend:
 - `tauri` — desktop app shell and command bridge
 
 Frontend:
-- `@chakra-ui/react`, `@emotion/react`, `@emotion/styled`, `framer-motion` — UI
+- `next`, `react`, `react-dom` — app framework, statically exported for Tauri
+- `tailwindcss`, `shadcn` (dev-time CLI), `lucide-react` — styling and UI primitives/icons
 - `@tauri-apps/api` — `invoke()` bridge to the Rust commands
+- `@tauri-apps/plugin-dialog` — native file-open dialog (paired with `tauri-plugin-dialog` on the Rust side and the
+  `dialog:default` permission in `src-tauri/capabilities/default.json`)

@@ -14,22 +14,22 @@ concurrency:
 
 jobs:
   backend:
-    # Pinned to 22.04: Tauri v1 needs libwebkit2gtk-4.0-dev, which isn't
-    # available on the 24.04 image ubuntu-latest now points to. Revisit
-    # this pin when the app moves to Tauri v2 (#25).
-    runs-on: ubuntu-22.04
+    # Tauri v2 needs libwebkit2gtk-4.1-dev, which is only on the 24.04 image
+    # ubuntu-latest now points to (v1's 4.0 package needed the 22.04 pin this
+    # used to have).
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: install Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
           cache: npm
 
       - name: install Rust stable
@@ -43,9 +43,13 @@ jobs:
       - name: install frontend dependencies
         run: npm ci
 
+      - name: lint frontend
+        run: npm run lint
+
       - name: build frontend
-        # tauri::generate_context!() needs `dist/` to exist at compile time,
-        # even though this job only builds/tests the Rust backend.
+        # tauri::generate_context!() needs `out/` (the static export) to
+        # exist at compile time, even though this job only builds/tests the
+        # Rust backend.
         run: npm run build
 
       - name: cargo build

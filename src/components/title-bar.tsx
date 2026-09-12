@@ -7,13 +7,18 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { platform } from "@tauri-apps/plugin-os";
 
 /**
- * Tauri window title bar: 36px, drag region (data-tauri-drag-region).
+ * Tauri window title bar: 36px, drag region (data-tauri-drag-region="deep").
  *
  * macOS uses titleBarStyle: "Overlay" (see src-tauri/tauri.macos.conf.json), so the
  * real native traffic lights float over the window content — this component just
  * reserves space for them and draws nothing there. Windows and Linux run with
  * decorations: false (no native chrome at all), so this component draws real,
  * functional minimize/maximize/close buttons on the right using the window API.
+ *
+ * "deep" (not the bare attribute) so a click anywhere in the bar's subtree drags —
+ * Tauri's bare data-tauri-drag-region only starts a drag on a *direct* click on the
+ * element carrying it, not on child elements like the title text. Buttons still
+ * block dragging regardless, since Tauri checks for clickable tags/roles first.
  */
 export function TitleBar({
   title,
@@ -53,7 +58,7 @@ export function TitleBar({
 
   return (
     <div
-      data-tauri-drag-region
+      data-tauri-drag-region="deep"
       className={cn(
         "flex h-9 shrink-0 items-center gap-3 border-b border-titlebar-border bg-titlebar px-2.5 text-xs text-titlebar-foreground select-none",
         className

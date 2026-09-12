@@ -9,6 +9,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { DnaMotif } from "@/components/brand/dna-motif";
 import { FastaResultPanel } from "@/components/fasta-result-panel";
 import { FastqResultPanel } from "@/components/fastq-result-panel";
 import { FileInput } from "@/components/file-input";
@@ -16,14 +17,14 @@ import { FormatToggle } from "@/components/format-toggle";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { ResultsDialog } from "@/components/results-dialog";
 import { TextInput } from "@/components/text-input";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { Wordmark } from "@/components/brand/wordmark";
+import { Toolbar } from "@/components/toolbar";
 import { analyseFileSequences, analyseTextSequences } from "@/lib/analysis";
 import type { SeqFormat, SeqResult } from "@/types/results";
 
 export function FastqAnalyserApp() {
   const textSequences = useRef("");
   const fileSequences = useRef("");
+  const [filePath, setFilePath] = useState("");
   const [seqFormat, setSeqFormat] = useState<SeqFormat>("fastq");
   const [results, setResults] = useState<SeqResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -35,7 +36,7 @@ export function FastqAnalyserApp() {
 
   // Change the file sequences in state
   const handleFileInput = async () => {
-    const filePath = await open({
+    const selected = await open({
       directory: false,
       multiple: false,
       filters: [
@@ -47,8 +48,9 @@ export function FastqAnalyserApp() {
     });
 
     const fileInputEl = document.getElementById("file-input") as HTMLInputElement | null;
-    if (fileInputEl) fileInputEl.value = filePath ?? "";
-    fileSequences.current = filePath ?? "";
+    if (fileInputEl) fileInputEl.value = selected ?? "";
+    fileSequences.current = selected ?? "";
+    setFilePath(selected ?? "");
   };
 
   // Change the sequence format
@@ -65,6 +67,7 @@ export function FastqAnalyserApp() {
     const fileInputEl = document.getElementById("file-input") as HTMLInputElement | null;
     if (fileInputEl) fileInputEl.value = "";
     fileSequences.current = "";
+    setFilePath("");
   };
 
   // Send the text sequences to the backend and return the analytics
@@ -88,8 +91,20 @@ export function FastqAnalyserApp() {
     setIsOpen(false);
   };
 
+  const submit = () => {
+    if (textSequences.current && fileSequences.current) {
+      alert("You may only send either text or a file. Not both.");
+    } else if (textSequences.current) {
+      analyseText();
+    } else if (fileSequences.current) {
+      analyseFile();
+    } else {
+      alert("Please give either text or a file.");
+    }
+  };
+
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10">
+    <>
       <ResultsDialog title="Results" isOpen={isOpen} onClose={closeAndClearResults}>
         {results.length > 0 ? (
           <Accordion>
@@ -111,55 +126,47 @@ export function FastqAnalyserApp() {
         )}
       </ResultsDialog>
 
-      <div className="flex items-center justify-between">
-        <Wordmark size={22} />
-        <ThemeSwitch />
-      </div>
-
-      <FormatToggle
-        id="format-switch"
-        title="Sequence type"
-        value={seqFormat}
-        checked={seqFormat === "fastq"}
-        onCheckedChange={handleFormatSwitch}
-      />
-
-      <Accordion>
-        <AccordionItem value="text">
-          <AccordionTrigger>Input Text</AccordionTrigger>
-          <AccordionContent>
-            <TextInput id="text-input" title="Paste fastq" onChange={handleTextInput} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="file">
-          <AccordionTrigger>Input File</AccordionTrigger>
-          <AccordionContent>
-            <FileInput id="file-input" title="Upload Fastq file" onClick={handleFileInput} />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-
-      <div className="flex justify-center gap-4">
-        <Button
-          onClick={() => {
-            if (textSequences.current && fileSequences.current) {
-              alert("You may only send either text or a file. Not both.");
-            } else if (textSequences.current) {
-              analyseText();
-            } else if (fileSequences.current) {
-              analyseFile();
-            } else {
-              alert("Please give either text or a file.");
-            }
-          }}
-        >
-          Submit
-        </Button>
-        <Button variant="outline" onClick={clearInputs}>
+      <Toolbar title="Import" subtitle={filePath || "No file selected"}>
+        <Button variant="outline" size="sm" onClick={clearInputs}>
           Clear
         </Button>
+        <Button size="sm" onClick={submit}>
+          Submit
+        </Button>
+      </Toolbar>
+
+      <div className="relative min-h-0 flex-1 overflow-y-auto">
+        <DnaMotif
+          variant="texture"
+          size={54}
+          className="pointer-events-none absolute inset-x-0 top-0 w-full"
+        />
+        <div className="relative mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10">
+          <FormatToggle
+            id="format-switch"
+            title="Sequence type"
+            value={seqFormat}
+            checked={seqFormat === "fastq"}
+            onCheckedChange={handleFormatSwitch}
+          />
+
+          <Accordion>
+            <AccordionItem value="text">
+              <AccordionTrigger>Input Text</AccordionTrigger>
+              <AccordionContent>
+                <TextInput id="text-input" title="Paste fastq" onChange={handleTextInput} />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="file">
+              <AccordionTrigger>Input File</AccordionTrigger>
+              <AccordionContent>
+                <FileInput id="file-input" title="Upload Fastq file" onClick={handleFileInput} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

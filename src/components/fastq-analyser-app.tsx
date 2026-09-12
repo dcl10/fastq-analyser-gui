@@ -16,6 +16,8 @@ import { FormatToggle } from "@/components/format-toggle";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { ResultsDialog } from "@/components/results-dialog";
 import { TextInput } from "@/components/text-input";
+import { ThemeSwitch } from "@/components/theme-switch";
+import { Wordmark } from "@/components/brand/wordmark";
 import { analyseFileSequences, analyseTextSequences } from "@/lib/analysis";
 import type { SeqFormat, SeqResult } from "@/types/results";
 
@@ -109,7 +111,10 @@ export function FastqAnalyserApp() {
         )}
       </ResultsDialog>
 
-      <h1 className="text-2xl font-semibold">Fastq Analyser</h1>
+      <div className="flex items-center justify-between">
+        <Wordmark size={22} />
+        <ThemeSwitch />
+      </div>
 
       <FormatToggle
         id="format-switch"

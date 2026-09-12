@@ -2,11 +2,12 @@ use crate::models::{FastaSeqResult, FastqSeqResult};
 use bio::io::{fasta, fastq};
 use bio::seq_analysis::{gc, orf};
 use bio::utils::TextSlice;
+use rayon::prelude::*;
 
 pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
     // Iterate over results and find GC content and ORFs
     let results = records
-        .iter()
+        .par_iter()
         .map(|rec| match rec.check() {
             Ok(()) => FastqSeqResult {
                 n_orfs: find_orfs(rec.seq()),
@@ -32,7 +33,7 @@ pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult
 pub fn analyse_fasta_records(records: &Vec<fasta::Record>) -> Vec<FastaSeqResult> {
     // Iterate over results and find GC content and ORFs
     let results = records
-        .iter()
+        .par_iter()
         .map(|rec| match rec.check() {
             Ok(_) => FastaSeqResult {
                 n_orfs: find_orfs(rec.seq()),

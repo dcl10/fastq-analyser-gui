@@ -19,7 +19,7 @@ export function FileInput({ id, title, onClick, isInvalid = false }: FileInputPr
         <Button type="button" size="sm" variant="outline" onClick={onClick}>
           Select
         </Button>
-        <Input id={id} readOnly aria-invalid={isInvalid} />
+        <Input id={id} readOnly aria-invalid={isInvalid} className="font-mono" />
       </div>
       {isInvalid ? (
         <p className="text-sm text-destructive">Please select a valid file.</p>

@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Rust backend and its build artifacts — no JS/TS source here.
     "src-tauri/**",
+    // Reference-only design system drop, not app source.
+    "FastQ Analyser Design System*/**",
   ]),
 ]);
 

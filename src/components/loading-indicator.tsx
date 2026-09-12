@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { DnaMotif } from "@/components/brand/dna-motif";
 
 interface LoadingIndicatorProps {
   message: string;
@@ -7,7 +7,7 @@ interface LoadingIndicatorProps {
 export function LoadingIndicator({ message }: LoadingIndicatorProps) {
   return (
     <div className="flex items-center gap-3 py-4">
-      <Loader2 className="size-6 animate-spin text-primary" />
+      <DnaMotif variant="loader" size={24} />
       <p>{message}</p>
     </div>
   );

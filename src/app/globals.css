@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -46,75 +46,265 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* FastQ Analyser additions — enables bg-state-pass, text-base-a, bg-phred-34, etc. */
+  --color-state-pass: var(--state-pass);
+  --color-state-pass-surface: var(--state-pass-surface);
+  --color-state-warn: var(--state-warn);
+  --color-state-warn-surface: var(--state-warn-surface);
+  --color-state-fail: var(--state-fail);
+  --color-state-fail-surface: var(--state-fail-surface);
+  --color-state-idle: var(--state-idle);
+  --color-state-idle-surface: var(--state-idle-surface);
+  --color-base-a: var(--base-a);
+  --color-base-c: var(--base-c);
+  --color-base-g: var(--base-g);
+  --color-base-t: var(--base-t);
+  --color-base-n: var(--base-n);
+  --color-base-a-surface: var(--base-a-surface);
+  --color-base-c-surface: var(--base-c-surface);
+  --color-base-g-surface: var(--base-g-surface);
+  --color-base-t-surface: var(--base-t-surface);
+  --color-base-n-surface: var(--base-n-surface);
+  --color-phred-0: var(--phred-0);
+  --color-phred-20: var(--phred-20);
+  --color-phred-28: var(--phred-28);
+  --color-phred-34: var(--phred-34);
+  --color-phred-40: var(--phred-40);
+  --color-qc-band-good: var(--qc-band-good);
+  --color-qc-band-ok: var(--qc-band-ok);
+  --color-qc-band-bad: var(--qc-band-bad);
+  --color-motif-highlight: var(--motif-highlight);
+  --color-motif-highlight-border: var(--motif-highlight-border);
+  --color-titlebar: var(--titlebar);
+  --color-titlebar-foreground: var(--titlebar-foreground);
+  --color-titlebar-border: var(--titlebar-border);
 }
 
+/* ---------------------------------------------------------------------------
+   FastQ Analyser colour system. Green is the brand; amber is the only accent.
+   Red is excluded from the data palette — pass/warn/fail is green/amber/plum,
+   and --destructive is reserved for irreversible actions.
+   --------------------------------------------------------------------------- */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+
+  /* ---- brand green ramp ---- */
+  --green-50:  oklch(0.972 0.023 152);
+  --green-100: oklch(0.938 0.046 152);
+  --green-200: oklch(0.885 0.075 152);
+  --green-300: oklch(0.812 0.100 153);
+  --green-400: oklch(0.712 0.125 154);
+  --green-500: oklch(0.618 0.132 155);
+  --green-600: oklch(0.521 0.115 156);
+  --green-700: oklch(0.432 0.094 157);
+  --green-800: oklch(0.345 0.072 158);
+  --green-900: oklch(0.258 0.050 159);
+  --green-950: oklch(0.196 0.036 160);
+
+  /* ---- amber accent ramp ---- */
+  --amber-50:  oklch(0.977 0.022 88);
+  --amber-100: oklch(0.949 0.049 87);
+  --amber-200: oklch(0.905 0.086 85);
+  --amber-300: oklch(0.858 0.117 82);
+  --amber-400: oklch(0.803 0.140 78);
+  --amber-500: oklch(0.748 0.148 72);
+  --amber-600: oklch(0.652 0.135 62);
+  --amber-700: oklch(0.540 0.110 58);
+  --amber-800: oklch(0.430 0.085 56);
+  --amber-900: oklch(0.330 0.062 56);
+
+  /* ---- neutrals, faint green cast (chroma <= 0.014) ---- */
+  --neutral-0:   oklch(1 0 0);
+  --neutral-25:  oklch(0.994 0.003 155);
+  --neutral-50:  oklch(0.982 0.004 155);
+  --neutral-100: oklch(0.965 0.006 155);
+  --neutral-200: oklch(0.929 0.008 155);
+  --neutral-300: oklch(0.885 0.009 157);
+  --neutral-400: oklch(0.715 0.012 158);
+  --neutral-500: oklch(0.556 0.014 160);
+  --neutral-600: oklch(0.452 0.014 162);
+  --neutral-700: oklch(0.352 0.013 163);
+  --neutral-800: oklch(0.262 0.012 164);
+  --neutral-900: oklch(0.205 0.012 165);
+  --neutral-950: oklch(0.168 0.011 165);
+
+  /* ---- supporting data hues (categorical, colour-blind safe against green) ---- */
+  --teal-500:  oklch(0.648 0.098 205);
+  --violet-500: oklch(0.560 0.128 296);
+  --plum-600:  oklch(0.492 0.152 340);
+  --slate-500: oklch(0.556 0.020 250);
+
+  /* ---- semantic: surfaces & text (light) ---- */
+  --background: var(--neutral-25);
+  --foreground: var(--neutral-900);
+  --card: var(--neutral-0);
+  --card-foreground: var(--neutral-900);
+  --popover: var(--neutral-0);
+  --popover-foreground: var(--neutral-900);
+
+  --primary: var(--green-600);
+  --primary-foreground: oklch(0.988 0.012 152);
+  --secondary: var(--neutral-100);
+  --secondary-foreground: var(--neutral-800);
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--neutral-500);
+  --accent: var(--amber-100);
+  --accent-foreground: var(--amber-900);
+
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --border: var(--neutral-200);
+  --input: var(--neutral-300);
+  --ring: var(--green-500);
+
+  /* ---- semantic: analysis state ---- */
+  --state-pass: var(--green-600);
+  --state-pass-surface: var(--green-50);
+  --state-warn: var(--amber-600);
+  --state-warn-surface: var(--amber-50);
+  --state-fail: var(--plum-600);
+  --state-fail-surface: oklch(0.966 0.020 340);
+  --state-idle: var(--neutral-400);
+  --state-idle-surface: var(--neutral-100);
+
+  /* ---- charts ---- */
+  --chart-1: var(--green-600);
+  --chart-2: var(--amber-500);
+  --chart-3: var(--teal-500);
+  --chart-4: var(--violet-500);
+  --chart-5: var(--slate-500);
+  --chart-grid: var(--neutral-200);
+  --chart-axis: var(--neutral-400);
+
+  /* ---- sidebar / rail (names kept from globals.css) ---- */
+  --sidebar: var(--neutral-50);
+  --sidebar-foreground: var(--neutral-900);
+  --sidebar-primary: var(--green-600);
+  --sidebar-primary-foreground: oklch(0.988 0.012 152);
+  --sidebar-accent: var(--neutral-100);
+  --sidebar-accent-foreground: var(--neutral-800);
+  --sidebar-border: var(--neutral-200);
+  --sidebar-ring: var(--green-500);
+
+  /* ---- desktop window chrome ---- */
+  --titlebar: oklch(0.958 0.006 155);
+  --titlebar-foreground: var(--neutral-600);
+  --titlebar-border: var(--neutral-200);
+
+  /* domain tokens */
+
+  --base-a: var(--green-600);
+  --base-c: var(--teal-500);
+  --base-g: var(--amber-600);
+  --base-t: var(--violet-500);
+  --base-n: var(--neutral-400);
+  --base-a-surface: var(--green-50);
+  --base-c-surface: oklch(0.960 0.020 205);
+  --base-g-surface: var(--amber-50);
+  --base-t-surface: oklch(0.955 0.022 296);
+  --base-n-surface: var(--neutral-100);
+
+  /* Phred ramp: plum -> amber -> green, lightness falling monotonically as quality
+     rises, so it also reads as a greyscale ramp. No stop lands in the red hues
+     (10-40deg): a red/green quality ramp is unreadable for the most common
+     colour-vision deficiency. */
+  --phred-0: oklch(0.660 0.150 335);
+  --phred-20: oklch(0.600 0.145 342);
+  --phred-28: oklch(0.545 0.130 62);
+  --phred-34: oklch(0.490 0.115 155);
+  --phred-40: oklch(0.430 0.100 158);
+
+  /* QC banding used behind per-base quality plots */
+  --qc-band-good: var(--green-50);
+  --qc-band-ok: var(--amber-50);
+  --qc-band-bad: oklch(0.966 0.020 340);
+
+  --motif-highlight: var(--amber-200);
+  --motif-highlight-border: var(--amber-500);
+  --orf-track: var(--green-500);
+  --gc-track: var(--teal-500);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+
+  --background: var(--neutral-950);
+  --foreground: oklch(0.972 0.004 152);
+  --card: var(--neutral-900);
+  --card-foreground: oklch(0.972 0.004 152);
+  --popover: var(--neutral-900);
+  --popover-foreground: oklch(0.972 0.004 152);
+
+  --primary: var(--green-400);
+  --primary-foreground: var(--green-950);
+  --secondary: var(--neutral-800);
+  --secondary-foreground: oklch(0.972 0.004 152);
+  --muted: var(--neutral-800);
+  --muted-foreground: oklch(0.715 0.012 158);
+  --accent: oklch(0.330 0.062 56);
+  --accent-foreground: var(--amber-200);
+
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: var(--green-500);
+
+  --state-pass: var(--green-400);
+  --state-pass-surface: oklch(0.258 0.050 159 / 55%);
+  --state-warn: var(--amber-400);
+  --state-warn-surface: oklch(0.330 0.062 56 / 55%);
+  --state-fail: oklch(0.672 0.152 340);
+  --state-fail-surface: oklch(0.300 0.090 340 / 55%);
+  --state-idle: var(--neutral-500);
+  --state-idle-surface: oklch(1 0 0 / 7%);
+
+  --chart-1: var(--green-400);
+  --chart-2: var(--amber-400);
+  --chart-3: oklch(0.740 0.098 205);
+  --chart-4: oklch(0.680 0.128 296);
+  --chart-5: oklch(0.680 0.020 250);
+  --chart-grid: oklch(1 0 0 / 10%);
+  --chart-axis: oklch(1 0 0 / 32%);
+
+  --sidebar: var(--neutral-900);
+  --sidebar-foreground: oklch(0.972 0.004 152);
+  --sidebar-primary: var(--green-400);
+  --sidebar-primary-foreground: var(--green-950);
+  --sidebar-accent: oklch(1 0 0 / 7%);
+  --sidebar-accent-foreground: oklch(0.972 0.004 152);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --sidebar-ring: var(--green-500);
+
+  --titlebar: oklch(0.195 0.012 165);
+  --titlebar-foreground: oklch(0.715 0.012 158);
+  --titlebar-border: oklch(1 0 0 / 9%);
+
+
+  --base-a: var(--green-400);
+  --base-c: oklch(0.740 0.098 205);
+  --base-g: var(--amber-400);
+  --base-t: oklch(0.680 0.128 296);
+  --base-n: var(--neutral-500);
+  --base-a-surface: oklch(0.258 0.050 159 / 60%);
+  --base-c-surface: oklch(0.280 0.050 205 / 60%);
+  --base-g-surface: oklch(0.330 0.062 56 / 60%);
+  --base-t-surface: oklch(0.290 0.060 296 / 60%);
+  --base-n-surface: oklch(1 0 0 / 7%);
+
+  /* Same hues, lightness rising with quality. */
+  --phred-0: oklch(0.580 0.150 335);
+  --phred-20: oklch(0.640 0.145 342);
+  --phred-28: oklch(0.700 0.130 62);
+  --phred-34: oklch(0.760 0.120 152);
+  --phred-40: oklch(0.820 0.110 155);
+
+  --qc-band-good: oklch(0.258 0.050 159 / 35%);
+  --qc-band-ok: oklch(0.330 0.062 56 / 30%);
+  --qc-band-bad: oklch(0.300 0.090 340 / 30%);
+
+  --motif-highlight: oklch(0.430 0.085 56);
+  --motif-highlight-border: var(--amber-400);
 }
 
 @layer base {
@@ -127,4 +317,9 @@
   html {
     @apply font-sans;
   }
+}
+
+@keyframes fq-progress-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
 }

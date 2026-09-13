@@ -37,8 +37,13 @@ workflow running backend `cargo build`/`cargo test` on PRs into `main` is tracke
 src/
 ├── app/
 │   ├── layout.tsx             # root layout, fonts, metadata
-│   └── page.tsx                # thin server component rendering FastqAnalyserApp
+│   ├── page.tsx                # "/" — splash/welcome screen: motif, product blurb,
+│   │   "Get started" (routes to /import via next/navigation's useRouter)
+│   └── import/page.tsx          # "/import" — windowed shell + FastqAnalyserApp
 ├── components/
+│   ├── app-shell.tsx, rail-nav.tsx, title-bar.tsx, toolbar.tsx, theme-switch.tsx,
+│   │   theme-provider.tsx        # windowed shell chrome (see PR #38)
+│   ├── brand/                    # dna-motif.tsx, wordmark.tsx — brand components
 │   ├── fastq-analyser-app.tsx  # 'use client' — owns text/file input and results state (was App.jsx)
 │   ├── file-input.tsx, text-input.tsx, format-toggle.tsx, loading-indicator.tsx,
 │   │   results-dialog.tsx, fasta-result-panel.tsx, fastq-result-panel.tsx

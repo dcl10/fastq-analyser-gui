@@ -10,13 +10,13 @@ pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult
         .par_iter()
         .map(|rec| match rec.check() {
             Ok(()) => FastqSeqResult {
-                n_orfs: find_orfs(rec.seq()),
+                n_orfs: (find_orfs(rec.seq()) as u32),
                 id: rec.id().to_owned(),
                 desc: rec.desc().unwrap_or("").to_owned(),
                 gc: gc::gc_content(rec.seq()),
                 is_valid: true,
                 phred_score: calc_phred_score(rec.qual()),
-                seq_len: rec.seq().len(),
+                seq_len: (rec.seq().len() as u32),
                 ..Default::default()
             },
             Err(_) => FastqSeqResult {
@@ -36,12 +36,12 @@ pub fn analyse_fasta_records(records: &Vec<fasta::Record>) -> Vec<FastaSeqResult
         .par_iter()
         .map(|rec| match rec.check() {
             Ok(_) => FastaSeqResult {
-                n_orfs: find_orfs(rec.seq()),
+                n_orfs: (find_orfs(rec.seq()) as u32),
                 id: rec.id().to_owned(),
                 desc: rec.desc().unwrap_or("").to_owned(),
                 gc: gc::gc_content(rec.seq()),
                 is_valid: true,
-                seq_len: rec.seq().len(),
+                seq_len: (rec.seq().len() as u32),
                 ..Default::default()
             },
             Err(_) => FastaSeqResult {

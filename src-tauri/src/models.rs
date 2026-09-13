@@ -9,7 +9,7 @@ pub struct FastqSeqResult {
     pub is_valid: bool,
     pub phred_score: u32,
     pub seq_len: usize,
-    pub result_type: String,
+    pub result_type: ResultType,
 }
 
 impl Default for FastqSeqResult {
@@ -22,7 +22,7 @@ impl Default for FastqSeqResult {
             is_valid: false,
             phred_score: 0,
             seq_len: 0,
-            result_type: String::from("fastq"),
+            result_type: ResultType::Fastq,
         }
     }
 }
@@ -35,7 +35,7 @@ pub struct FastaSeqResult {
     pub n_orfs: usize,
     pub is_valid: bool,
     pub seq_len: usize,
-    pub result_type: String,
+    pub result_type: ResultType,
 }
 
 impl Default for FastaSeqResult {
@@ -47,7 +47,13 @@ impl Default for FastaSeqResult {
             n_orfs: 0,
             is_valid: false,
             seq_len: 0,
-            result_type: String::from("fasta"),
+            result_type: ResultType::Fasta,
         }
     }
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ResultType {
+    Fasta,
+    Fastq,
 }

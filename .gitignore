@@ -45,3 +45,6 @@ next-env.d.ts
 *.njsproj
 *.sln
 *.sw?
+
+# Design system (temporarily add for ease of finding work on other stuff)
+FastQ Analyser Design System (1)*

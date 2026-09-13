@@ -1,10 +1,5 @@
-import { AppShell } from "@/components/app-shell";
-import { FastqAnalyserApp } from "@/components/fastq-analyser-app";
+import { Splash } from "@/components/splash";
 
 export default function Home() {
-  return (
-    <AppShell>
-      <FastqAnalyserApp />
-    </AppShell>
-  );
+  return <Splash />;
 }

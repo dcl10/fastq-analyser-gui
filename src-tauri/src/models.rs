@@ -5,10 +5,10 @@ pub struct FastqSeqResult {
     pub id: String,
     pub desc: String,
     pub gc: f32,
-    pub n_orfs: usize,
+    pub n_orfs: u32,
     pub is_valid: bool,
     pub phred_score: u32,
-    pub seq_len: usize,
+    pub seq_len: u32,
     pub result_type: ResultType,
 }
 
@@ -32,9 +32,9 @@ pub struct FastaSeqResult {
     pub id: String,
     pub desc: String,
     pub gc: f32,
-    pub n_orfs: usize,
+    pub n_orfs: u32,
     pub is_valid: bool,
-    pub seq_len: usize,
+    pub seq_len: u32,
     pub result_type: ResultType,
 }
 

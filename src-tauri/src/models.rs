@@ -57,3 +57,16 @@ pub enum ResultType {
     Fasta,
     Fastq,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Run {
+    pub id: u32,
+    pub created_at: DateTime<Utc>,
+    pub records: Option<RunRecords>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum RunRecords {
+    FastaRecords(Vec<FastaSeqResult>),
+    FastqRecords(Vec<FastqSeqResult>),
+}

@@ -12,7 +12,6 @@ pub struct FastqSeqResult {
     pub is_valid: bool,
     pub phred_score: u32,
     pub seq_len: u32,
-    pub result_type: ResultType,
 }
 
 impl Default for FastqSeqResult {
@@ -56,7 +55,43 @@ impl Default for FastaSeqResult {
 pub struct Run {
     pub id: u32,
     pub created_at: DateTime<Utc>,
-    pub records: Option<RunRecords>,
+    pub records: RunRecords,
+    pub result_type: ResultType,
+}
+
+impl From<RunEntity> for Run {
+    fn from(value: RunEntity) -> Self {
+        match value.result_type {
+            ResultType::Fasta => {
+                let records: Vec<FastaSeqResult> = value
+                    .records
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(Into::into)
+                    .collect();
+                Run {
+                    id: value.id,
+                    created_at: value.created_at,
+                    records: RunRecords::FastaRecords(records),
+                    result_type: value.result_type,
+                }
+            }
+            ResultType::Fastq => {
+                let records: Vec<FastqSeqResult> = value
+                    .records
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(Into::into)
+                    .collect();
+                Run {
+                    id: value.id,
+                    created_at: value.created_at,
+                    records: RunRecords::FastqRecords(records),
+                    result_type: value.result_type,
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

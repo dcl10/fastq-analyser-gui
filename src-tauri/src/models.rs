@@ -1,9 +1,10 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, PartialOrd)]
 pub struct FastqSeqResult {
     pub id: String,
-    pub desc: String,
+    pub desc: Option<String>,
     pub gc: f32,
     pub n_orfs: u32,
     pub is_valid: bool,
@@ -16,7 +17,7 @@ impl Default for FastqSeqResult {
     fn default() -> Self {
         FastqSeqResult {
             id: String::from("id"),
-            desc: String::from("..."),
+            desc: None,
             gc: 0.0,
             n_orfs: 0,
             is_valid: false,
@@ -30,7 +31,7 @@ impl Default for FastqSeqResult {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, PartialOrd)]
 pub struct FastaSeqResult {
     pub id: String,
-    pub desc: String,
+    pub desc: Option<String>,
     pub gc: f32,
     pub n_orfs: u32,
     pub is_valid: bool,
@@ -42,7 +43,7 @@ impl Default for FastaSeqResult {
     fn default() -> Self {
         FastaSeqResult {
             id: String::from("id"),
-            desc: String::from("..."),
+            desc: None,
             gc: 0.0,
             n_orfs: 0,
             is_valid: false,

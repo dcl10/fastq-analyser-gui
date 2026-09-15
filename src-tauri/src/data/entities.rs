@@ -1,5 +1,7 @@
 use sqlx::types::chrono::{self, Utc};
 
+use crate::models::{FastaSeqResult, FastqSeqResult};
+
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Run {
     pub id: u32,
@@ -20,7 +22,9 @@ pub struct Record {
     pub result_type: ResultType,
 }
 
-#[derive(Debug, Clone, sqlx::Type)]
+#[derive(
+    Debug, Clone, sqlx::Type, serde::Deserialize, serde::Serialize, PartialEq, Eq, PartialOrd, Ord,
+)]
 pub enum ResultType {
     Fasta,
     Fastq,

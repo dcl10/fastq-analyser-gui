@@ -1,4 +1,4 @@
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode::Wal, SqlitePool, SqlitePoolOptions};
 use std::str::FromStr;
 use tauri::{AppHandle, Manager};
 
@@ -13,7 +13,9 @@ pub async fn init_db(app: &AppHandle) -> Result<SqlitePool, sqlx::Error> {
     let db_path = data_dir.join("fastq-analyser-db.sqlite");
 
     let options = SqliteConnectOptions::from_str(&format!("sqlite://{}", db_path.display()))?
-        .create_if_missing(true);
+        .create_if_missing(true)
+        .foreign_keys(true)
+        .journal_mode(Wal);
 
     let pool = SqlitePoolOptions::new()
         .max_connections(5)

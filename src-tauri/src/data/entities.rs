@@ -2,7 +2,7 @@ use sqlx::types::chrono::{self, Utc};
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Run {
-    pub id: usize,
+    pub id: u32,
     pub created_at: chrono::DateTime<Utc>,
     pub records: Option<Vec<Record>>,
 }

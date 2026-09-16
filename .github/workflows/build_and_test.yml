@@ -32,6 +32,11 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: enable Corepack
+        # Bare `corepack enable` only shims Yarn/pnpm by default — npm needs
+        # to be named explicitly to have Corepack override Node's bundled npm.
+        run: corepack enable npm
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
 

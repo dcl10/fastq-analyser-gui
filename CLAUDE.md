@@ -11,6 +11,10 @@ JSON.
 
 Frontend (from repo root):
 
+The npm version is pinned via `"packageManager"` in `package.json` (currently `npm@11.6.2`) and enforced by
+Corepack (`corepack enable`), so local installs and CI resolve to the exact same npm and `package-lock.json` doesn't
+drift between npm major versions.
+
 ```bash
 npm install
 npm run dev          # next.js dev server only

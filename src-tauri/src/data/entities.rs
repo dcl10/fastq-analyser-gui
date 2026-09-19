@@ -6,6 +6,7 @@ use crate::models::{FastaSeqResult, FastqSeqResult, Run as RunModel, RunRecords}
 pub struct Run {
     pub id: u32,
     pub created_at: chrono::DateTime<Utc>,
+    #[sqlx(skip)]
     pub records: Option<Vec<Record>>,
     pub result_type: ResultType,
 }

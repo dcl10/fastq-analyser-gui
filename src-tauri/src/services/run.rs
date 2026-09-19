@@ -1,6 +1,6 @@
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 
-use crate::data::entities::{Record as RecordEntity, Run as RunEntity};
+use crate::data::entities::{Run as RunEntity};
 use crate::models::Run as RunModel;
 
 pub async fn create_run(pool: SqlitePool, run: RunModel) -> Result<u32, sqlx::Error> {
@@ -22,7 +22,6 @@ pub async fn create_run(pool: SqlitePool, run: RunModel) -> Result<u32, sqlx::Er
     .await?;
 
     let run_id = inserted_run.id;
-    let mut saved_records: Vec<RecordEntity> = Vec::with_capacity(records.len());
 
     for chunk in records.chunks(1000) {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
@@ -41,12 +40,7 @@ pub async fn create_run(pool: SqlitePool, run: RunModel) -> Result<u32, sqlx::Er
                 .push_bind(record.phred_score);
         });
 
-        let mut saved = builder
-        .build_query_as::<RecordEntity>()
-        .fetch_all(&mut *tx)
-        .await?;
-
-        saved_records.append(&mut saved);
+        builder.build().execute(&mut *tx).await?;
     }
 
     tx.commit().await?;

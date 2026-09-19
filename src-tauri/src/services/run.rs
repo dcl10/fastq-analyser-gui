@@ -46,3 +46,20 @@ pub async fn create_run(pool: SqlitePool, run: RunModel) -> Result<u32, sqlx::Er
     tx.commit().await?;
     Ok(run_id)
 }
+
+pub async fn list_runs(pool: SqlitePool) -> Result<Vec<RunModel>, sqlx::Error> {
+    let runs: Vec<RunModel> = sqlx::query_as::<Sqlite, RunEntity>(
+        r#"
+        SELECT id, created_at, result_type
+        FROM runs
+        ORDER BY created_at DESC
+        "#
+    )
+    .fetch_all(&pool)
+    .await?
+    .into_iter()
+    .map(|r| r.into())
+    .collect();
+
+    Ok(runs)
+}

@@ -2,6 +2,7 @@ use sqlx::SqlitePool;
 use tauri::Manager;
 
 mod analysis;
+mod commands;
 mod data;
 mod models;
 mod services;
@@ -36,10 +37,10 @@ pub fn run() {
             })
         })
         .invoke_handler(tauri::generate_handler![
-            analysis::commands::analyse_fastq_sequences,
-            analysis::commands::analyse_fastq_file,
-            analysis::commands::analyse_fasta_sequences,
-            analysis::commands::analyse_fasta_file
+            commands::analysis::analyse_fastq_sequences,
+            commands::analysis::analyse_fastq_file,
+            commands::analysis::analyse_fasta_sequences,
+            commands::analysis::analyse_fasta_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

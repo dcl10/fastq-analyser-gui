@@ -47,7 +47,9 @@ export function FastqAnalyserApp() {
       ],
     });
 
-    const fileInputEl = document.getElementById("file-input") as HTMLInputElement | null;
+    const fileInputEl = document.getElementById(
+      "file-input",
+    ) as HTMLInputElement | null;
     if (fileInputEl) fileInputEl.value = selected ?? "";
     fileSequences.current = selected ?? "";
     setFilePath(selected ?? "");
@@ -60,11 +62,15 @@ export function FastqAnalyserApp() {
 
   // Clear the input fields and reset the state
   const clearInputs = () => {
-    const textInputEl = document.getElementById("text-input") as HTMLTextAreaElement | null;
+    const textInputEl = document.getElementById(
+      "text-input",
+    ) as HTMLTextAreaElement | null;
     if (textInputEl) textInputEl.value = "";
     textSequences.current = "";
 
-    const fileInputEl = document.getElementById("file-input") as HTMLInputElement | null;
+    const fileInputEl = document.getElementById(
+      "file-input",
+    ) as HTMLInputElement | null;
     if (fileInputEl) fileInputEl.value = "";
     fileSequences.current = "";
     setFilePath("");
@@ -103,7 +109,12 @@ export function FastqAnalyserApp() {
   return (
     <>
       <Toolbar title="Import" subtitle={filePath || "No file selected"}>
-        <Button variant="outline" size="sm" onClick={clearInputs} disabled={isRunning}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={clearInputs}
+          disabled={isRunning}
+        >
           Clear
         </Button>
         <Button size="sm" onClick={submit} disabled={isRunning}>
@@ -118,7 +129,9 @@ export function FastqAnalyserApp() {
           className="pointer-events-none absolute inset-x-0 top-0 w-full"
         />
         <div className="relative mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10">
-          {isRunning ? <LoadingIndicator message="Analysing and saving sequences..." /> : null}
+          {isRunning ? (
+            <LoadingIndicator message="Analysing and saving sequences..." />
+          ) : null}
           {error ? (
             <p role="alert" className="text-sm text-destructive">
               {error}
@@ -137,14 +150,22 @@ export function FastqAnalyserApp() {
             <AccordionItem value="text">
               <AccordionTrigger>Input Text</AccordionTrigger>
               <AccordionContent>
-                <TextInput id="text-input" title="Paste fastq" onChange={handleTextInput} />
+                <TextInput
+                  id="text-input"
+                  title={`Paste ${seqFormat.toUpperCase()}`}
+                  onChange={handleTextInput}
+                />
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="file">
               <AccordionTrigger>Input File</AccordionTrigger>
               <AccordionContent>
-                <FileInput id="file-input" title="Upload Fastq file" onClick={handleFileInput} />
+                <FileInput
+                  id="file-input"
+                  title={`Upload ${seqFormat.toUpperCase()} file`}
+                  onClick={handleFileInput}
+                />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

@@ -18,3 +18,8 @@ export async function saveRun(format: SeqFormat, records: RunRecords): Promise<n
 export async function listRuns(): Promise<Run[]> {
   return invoke<Run[]>("list_runs");
 }
+
+// Delete a run; its records are removed with it
+export async function deleteRun(runId: number): Promise<void> {
+  return invoke<void>("delete_run", { runId });
+}

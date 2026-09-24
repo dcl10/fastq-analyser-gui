@@ -40,7 +40,11 @@ pub fn run() {
             commands::analysis::analyse_fastq_sequences,
             commands::analysis::analyse_fastq_file,
             commands::analysis::analyse_fasta_sequences,
-            commands::analysis::analyse_fasta_file
+            commands::analysis::analyse_fasta_file,
+            commands::run::delete_run,
+            commands::run::list_runs,
+            commands::run::load_run,
+            commands::run::save_run,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

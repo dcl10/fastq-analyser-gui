@@ -35,11 +35,11 @@ pub async fn create_run(pool: SqlitePool, run: RunModel) -> Result<u32, sqlx::Er
         match result_type {
             ResultType::Fasta => {
                 let records: Vec<FastaSeqResult> = records.into_iter().map(|r| r.into()).collect();
-                let _ = create_records_from_fasta_results(pool, &records, run_id).await?;
+                let _ = create_records_from_fasta_results(&mut tx, &records, run_id).await?;
             }
             ResultType::Fastq => {
                 let records: Vec<FastqSeqResult> = records.into_iter().map(|r| r.into()).collect();
-                let _ = create_records_from_fastq_results(pool, &records, run_id).await?;
+                let _ = create_records_from_fastq_results(&mut tx, &records, run_id).await?;
             }
         }
     }

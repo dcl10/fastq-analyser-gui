@@ -1,15 +1,13 @@
-use sqlx::{QueryBuilder, Sqlite, SqlitePool};
+use sqlx::{QueryBuilder, Sqlite, SqliteConnection, SqlitePool};
 
 use crate::data::entities::Record as RecordEntity;
 use crate::models::{FastaSeqResult, FastqSeqResult};
 
 pub async fn create_records_from_fastq_results(
-    pool: SqlitePool,
+    conn: &mut SqliteConnection,
     records: &Vec<FastqSeqResult>,
     run_id: u32,
 ) -> Result<Vec<u32>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-
     let mut record_ids: Vec<u32> = Vec::new();
     for chunk in records.chunks(1000) {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
@@ -31,21 +29,18 @@ pub async fn create_records_from_fastq_results(
         builder.push(r#"RETURNING id"#);
         let query = builder.build_query_scalar::<u32>();
 
-        let mut ids = query.fetch_all(&mut *tx).await?;
+        let mut ids = query.fetch_all(&mut *conn).await?;
         record_ids.append(&mut ids);
     }
 
-    tx.commit().await?;
     Ok(record_ids)
 }
 
 pub async fn create_records_from_fasta_results(
-    pool: SqlitePool,
+    conn: &mut SqliteConnection,
     records: &Vec<FastaSeqResult>,
     run_id: u32,
 ) -> Result<Vec<u32>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-
     let mut record_ids: Vec<u32> = Vec::new();
     for chunk in records.chunks(1000) {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
@@ -66,11 +61,10 @@ pub async fn create_records_from_fasta_results(
         builder.push(r#"RETURNING id"#);
         let query = builder.build_query_scalar::<u32>();
 
-        let mut ids = query.fetch_all(&mut *tx).await?;
+        let mut ids = query.fetch_all(&mut *conn).await?;
         record_ids.append(&mut ids);
     }
 
-    tx.commit().await?;
     Ok(record_ids)
 }
 

@@ -4,8 +4,8 @@
 
 `fastq-analyser-gui` is a Tauri desktop app that analyses DNA sequence records. Users paste FASTA/FASTQ text or pick
 a file (optionally gzip-compressed), and the app reports per-record statistics: GC content, open reading frame (ORF)
-count, sequence length, validity, and — for FASTQ — a Phred quality score. Results can be saved to and reloaded from
-JSON.
+count, sequence length, validity, and — for FASTQ — a Phred quality score. Analysis runs can be saved to, listed from,
+reloaded from and deleted from a local SQLite database.
 
 ## Build & Test
 
@@ -59,13 +59,22 @@ src/
     └── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs
 
 src-tauri/src/
-├── main.rs / lib.rs           # registers the #[tauri::command] handlers below, plugins (dialog, log)
-├── models.rs                  # FastqSeqResult / FastaSeqResult (serde structs)
+├── main.rs / lib.rs           # registers the #[tauri::command] handlers below, plugins (dialog, log), AppState (db pool)
+├── models.rs                  # FastqSeqResult / FastaSeqResult / Run / RunRecords (serde structs)
 ├── analysis/
-│   ├── analysers.rs           # analyse_fastq_records / analyse_fasta_records — GC%, ORF count, Phred score
-│   └── commands.rs            # tauri commands: *_sequences (raw text) and *_file (path) for both formats
+│   └── analysers.rs           # analyse_fastq_records / analyse_fasta_records — GC%, ORF count, Phred score
+├── commands/
+│   ├── analysis.rs            # tauri commands: *_sequences (raw text) and *_file (path) for both formats
+│   └── run.rs                 # tauri commands: save_run / load_run / list_runs / delete_run
+├── data/
+│   ├── db.rs                  # init_db — SQLite pool (WAL, foreign keys on) + runs migrations
+│   └── entities.rs            # Run / Record / ResultType row types (sqlx::FromRow)
 └── services/
-    └── io.rs                   # file readers (transparent .gz extraction), save_results / load_results (JSON)
+    ├── io.rs                  # file readers (transparent .gz extraction)
+    ├── run.rs                 # create_run / list_runs / get_run_with_records / delete_run
+    └── record.rs              # batch record inserts (per format) / list_records_for_run
+
+src-tauri/migrations/          # sqlx migrations (runs, records with ON DELETE CASCADE)
 ```
 
 Tauri bundles a static frontend — no Node server ships in the app. `next.config.ts` sets `output: "export"` so
@@ -78,24 +87,29 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
 
 - `FastqSeqResult` / `FastaSeqResult` (`models.rs`) — `id`, `desc`, `gc`, `n_orfs`, `is_valid`, `seq_len`,
   `result_type` (`"fastq"`/`"fasta"`); `FastqSeqResult` additionally carries `phred_score`.
-- Tauri commands (`analysis/commands.rs`): `analyse_fastq_sequences`, `analyse_fastq_file`,
+- `Run` (`models.rs`) — `id`, `created_at`, `result_type`, and `records: RunRecords` (`FastaRecords(Vec<...>)` /
+  `FastqRecords(Vec<...>)`). `data/entities.rs` holds the matching row types; services convert between the two with
+  `From` impls so callers only see `models.rs` types.
+- Analysis commands (`commands/analysis.rs`): `analyse_fastq_sequences`, `analyse_fastq_file`,
   `analyse_fasta_sequences`, `analyse_fasta_file`. The `_file` variants transparently gunzip `.gz` inputs and delete
   the extracted copy afterwards.
+- Run commands (`commands/run.rs`): `save_run` (returns the new run id), `load_run`, `list_runs`, `delete_run`.
 
 ## Current Capabilities
 
 - Both FASTA and FASTQ are supported end-to-end, from pasted text or a file, with transparent gzip decompression.
 - Record analysis is single-threaded — `analyse_fastq_records`/`analyse_fasta_records` loop over records
   sequentially (tracked in an open issue for multithreaded analysis).
-- Results round-trip through JSON via `services::io::save_results` / `load_results`.
+- Runs persist to SQLite via `services::run`. `create_run` inserts the run and its records in a single transaction;
+  `delete_run` relies on `ON DELETE CASCADE` to remove records. Unit tests for these services are tracked in #55.
 
 ## Coding Conventions
 
 Rust (`src-tauri`):
 - Types: `PascalCase`; functions/variables: `snake_case`
 - `#[cfg(test)] mod tests` block at the bottom of each file; test functions prefixed `test_`
-- Keep `#[tauri::command]` functions in `analysis/commands.rs` thin — parsing and scoring logic belongs in
-  `analysers.rs` or `services/`
+- Keep `#[tauri::command]` functions in `commands/` thin — parsing and scoring logic belongs in `analysers.rs`, and
+  database/file logic in `services/`
 
 Frontend (`src`):
 - TypeScript function components with hooks (`useState`/`useRef`) — no class components
@@ -138,6 +152,7 @@ Backend:
 - `bio` — FASTA/FASTQ parsing, GC content, ORF finding
 - `flate2` — gzip decompression
 - `serde` / `serde_json` — result (de)serialization
+- `sqlx` (SQLite, tokio runtime, migrations) / `chrono` — local run storage and timestamps
 - `uuid` — used in test fixtures
 - `tauri` — desktop app shell and command bridge
 

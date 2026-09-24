@@ -1,9 +1,10 @@
 use sqlx::{Sqlite, SqlitePool};
 
 use crate::data::entities::{ResultType, Run as RunEntity};
+use crate::models::RunRecords::{FastaRecords, FastqRecords};
 use crate::models::{FastaSeqResult, FastqSeqResult, Run as RunModel};
 use crate::services::record::{
-    create_records_from_fasta_results, create_records_from_fastq_results,
+    create_records_from_fasta_results, create_records_from_fastq_results, list_records_for_run,
 };
 
 pub async fn create_run(pool: SqlitePool, run: RunModel) -> Result<u32, sqlx::Error> {
@@ -65,17 +66,28 @@ pub async fn list_runs(pool: SqlitePool) -> Result<Vec<RunModel>, sqlx::Error> {
 }
 
 pub async fn get_run_with_records(pool: SqlitePool, run_id: u32) -> Result<RunModel, sqlx::Error> {
-    let run: RunModel = sqlx::query_as::<Sqlite, RunEntity>(
+    let mut run: RunModel = sqlx::query_as::<Sqlite, RunEntity>(
         r#"
         SELECT id, created_at, result_type
         FROM runs
         WHERE id = ?1
         "#,
     )
-    .bind(run_id)
+    .bind(&run_id)
     .fetch_one(&pool)
     .await?
     .into();
 
-    Ok(run)
+    match run.result_type {
+        ResultType::Fasta => {
+            let records = list_records_for_run::<FastaSeqResult>(pool, run_id).await?;
+            run.records = FastaRecords(records);
+            Ok(run)
+        }
+        ResultType::Fastq => {
+            let records = list_records_for_run::<FastqSeqResult>(pool, run_id).await?;
+            run.records = FastqRecords(records);
+            Ok(run)
+        }
+    }
 }

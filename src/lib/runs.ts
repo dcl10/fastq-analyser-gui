@@ -23,3 +23,8 @@ export async function listRuns(): Promise<Run[]> {
 export async function deleteRun(runId: number): Promise<void> {
   return invoke<void>("delete_run", { runId });
 }
+
+// Load a run together with all of its records
+export async function loadRun(runId: number): Promise<Run> {
+  return invoke<Run>("load_run", { runId });
+}

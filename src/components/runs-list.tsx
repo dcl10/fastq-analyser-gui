@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Trash2Icon } from "lucide-react";
 import {
   AlertDialog,
@@ -26,7 +28,10 @@ import { Toolbar } from "@/components/toolbar";
 import { deleteRun, listRuns } from "@/lib/runs";
 import type { Run } from "@/types/runs";
 
+const runDetailHref = (run: Run) => `/runs/detail?id=${run.id}`;
+
 export function RunsList() {
+  const router = useRouter();
   const [runs, setRuns] = useState<Run[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -114,8 +119,17 @@ export function RunsList() {
               </TableHeader>
               <TableBody>
                 {runs.map((run) => (
-                  <TableRow key={run.id}>
-                    <TableCell className="font-mono tabular-nums">#{run.id}</TableCell>
+                  <TableRow
+                    key={run.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push(runDetailHref(run))}
+                  >
+                    <TableCell className="font-mono tabular-nums">
+                      {/* Keyboard route to the same page the row click opens */}
+                      <Link href={runDetailHref(run)} className="hover:underline">
+                        #{run.id}
+                      </Link>
+                    </TableCell>
                     <TableCell>{new Date(run.created_at).toLocaleString()}</TableCell>
                     <TableCell>{run.result_type.toUpperCase()}</TableCell>
                     <TableCell className="text-right">
@@ -124,7 +138,11 @@ export function RunsList() {
                         size="icon-sm"
                         aria-label={`Delete run #${run.id}`}
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setRunToDelete(run)}
+                        onClick={(e) => {
+                          // Don't also open the run via the row click
+                          e.stopPropagation();
+                          setRunToDelete(run);
+                        }}
                       >
                         <Trash2Icon />
                       </Button>

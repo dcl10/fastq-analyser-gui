@@ -44,19 +44,23 @@ src/
 │   ├── page.tsx                # "/" — splash/welcome screen: motif, product blurb,
 │   │   "Get started" (routes to /import via next/navigation's useRouter)
 │   ├── import/page.tsx          # "/import" — windowed shell + FastqAnalyserApp
-│   └── runs/page.tsx            # "/runs" — windowed shell + RunsList
+│   └── runs/
+│       ├── page.tsx             # "/runs" — windowed shell + RunsList
+│       └── detail/page.tsx      # "/runs/detail?id=<id>" — windowed shell + RunDetail (query param, not
+│                                #   /runs/[id]: static export can't prerender ids that only exist in the DB)
 ├── components/
 │   ├── app-shell.tsx, rail-nav.tsx, title-bar.tsx, toolbar.tsx, theme-switch.tsx,
 │   │   theme-provider.tsx        # windowed shell chrome (see PR #38); rail items route to /<id>
 │   ├── brand/                    # dna-motif.tsx, wordmark.tsx — brand components
 │   ├── fastq-analyser-app.tsx  # 'use client' — text/file input; Submit analyses, saves the run, routes to /runs
-│   ├── runs-list.tsx            # 'use client' — table of saved runs from list_runs, with confirm-to-delete
-│   ├── file-input.tsx, text-input.tsx, format-toggle.tsx, loading-indicator.tsx,
-│   │   results-dialog.tsx, fasta-result-panel.tsx, fastq-result-panel.tsx
+│   ├── runs-list.tsx            # 'use client' — table of saved runs from list_runs; rows open the detail
+│   │                            #   page, bin button confirms then deletes
+│   ├── run-detail.tsx           # 'use client' — one run's records (load_run) as a table
+│   ├── file-input.tsx, text-input.tsx, format-toggle.tsx, loading-indicator.tsx
 │   └── ui/                      # shadcn/ui primitives (button, dialog, accordion, input, textarea, switch, label, table, alert-dialog)
 ├── lib/
 │   ├── analysis.ts             # invoke() wrappers for the analyse_* commands, returning RunRecords
-│   ├── runs.ts                 # invoke() wrappers for save_run / list_runs / delete_run
+│   ├── runs.ts                 # invoke() wrappers for save_run / list_runs / load_run / delete_run
 │   └── utils.ts                  # shadcn's `cn()` class-merging helper
 └── types/
     ├── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs

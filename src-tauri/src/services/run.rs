@@ -58,7 +58,7 @@ pub async fn list_runs(pool: SqlitePool) -> Result<Vec<RunModel>, sqlx::Error> {
     .fetch_all(&pool)
     .await?
     .into_iter()
-    .map(|r| r.into())
+    .map(|r| RunModel::from(r))
     .collect();
 
     Ok(runs)

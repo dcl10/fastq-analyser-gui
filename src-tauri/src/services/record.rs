@@ -1,78 +1,74 @@
-use sqlx::{Sqlite, SqlitePool};
+use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 
-use crate::data::entities::Record as RecordEntity;
 use crate::models::{FastaSeqResult, FastqSeqResult};
 
-pub async fn create_record_from_fastq_result(
+pub async fn create_records_from_fastq_results(
     pool: SqlitePool,
-    record: &FastqSeqResult,
+    records: &Vec<FastqSeqResult>,
     run_id: u32,
-) -> Result<FastqSeqResult, sqlx::Error> {
+) -> Result<Vec<u32>, sqlx::Error> {
     let mut tx = pool.begin().await?;
 
-    let inserted_record = sqlx::query_as::<Sqlite, RecordEntity>(
-        r#"
-        INSERT INTO records (run_id, seq_id, description, gc_content, n_orfs, is_valid, seq_len, phred_score)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-        RETURNING id, run_id, seq_id, description, gc_content, n_orfs, is_valid, seq_len, phred_score
-        "#,
-    )
-    .bind(run_id)
-    .bind(&record.id)
-    .bind(&record.desc)
-    .bind(record.gc)
-    .bind(record.n_orfs)
-    .bind(record.is_valid)
-    .bind(record.seq_len)
-    .bind(record.phred_score)
-    .fetch_one(&mut *tx)
-    .await?;
+    let mut record_ids: Vec<u32> = Vec::new();
+    for chunk in records.chunks(1000) {
+        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+            "INSERT INTO records \
+            (run_id, seq_id, description, gc_content, n_orfs, is_valid, seq_len, phred_score) ",
+        );
+
+        builder.push_values(chunk, |mut row, record| {
+            row.push_bind(run_id)
+                .push_bind(&record.id)
+                .push_bind(&record.desc)
+                .push_bind(record.gc)
+                .push_bind(record.n_orfs)
+                .push_bind(record.is_valid)
+                .push_bind(record.seq_len)
+                .push_bind(record.phred_score);
+        });
+
+        builder.push(r#"RETURNING id"#);
+        let query = builder.build_query_scalar::<u32>();
+
+        let mut ids = query.fetch_all(&mut *tx).await?;
+        record_ids.append(&mut ids);
+    }
 
     tx.commit().await?;
-    let record = FastqSeqResult {
-        id: inserted_record.seq_id,
-        desc: inserted_record.description,
-        gc: inserted_record.gc_content,
-        n_orfs: inserted_record.n_orfs,
-        is_valid: inserted_record.is_valid,
-        seq_len: inserted_record.seq_len,
-        phred_score: inserted_record.phred_score.unwrap(),
-    };
-    Ok(record)
+    Ok(record_ids)
 }
 
-pub async fn create_record_from_fasta_result(
+pub async fn create_records_from_fasta_results(
     pool: SqlitePool,
-    record: &FastaSeqResult,
+    records: &Vec<FastaSeqResult>,
     run_id: u32,
-) -> Result<FastaSeqResult, sqlx::Error> {
+) -> Result<Vec<u32>, sqlx::Error> {
     let mut tx = pool.begin().await?;
 
-    let inserted_record = sqlx::query_as::<Sqlite, RecordEntity>(
-        r#"
-        INSERT INTO records (run_id, seq_id, description, gc_content, n_orfs, is_valid, seq_len, phred_score)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-        RETURNING id, run_id, seq_id, description, gc_content, n_orfs, is_valid, seq_len, phred_score
-        "#,
-    )
-    .bind(run_id)
-    .bind(&record.id)
-    .bind(&record.desc)
-    .bind(record.gc)
-    .bind(record.n_orfs)
-    .bind(record.is_valid)
-    .bind(record.seq_len)
-    .fetch_one(&mut *tx)
-    .await?;
+    let mut record_ids: Vec<u32> = Vec::new();
+    for chunk in records.chunks(1000) {
+        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+            "INSERT INTO records \
+            (run_id, seq_id, description, gc_content, n_orfs, is_valid, seq_len) ",
+        );
+
+        builder.push_values(chunk, |mut row, record| {
+            row.push_bind(run_id)
+                .push_bind(&record.id)
+                .push_bind(&record.desc)
+                .push_bind(record.gc)
+                .push_bind(record.n_orfs)
+                .push_bind(record.is_valid)
+                .push_bind(record.seq_len);
+        });
+
+        builder.push(r#"RETURNING id"#);
+        let query = builder.build_query_scalar::<u32>();
+
+        let mut ids = query.fetch_all(&mut *tx).await?;
+        record_ids.append(&mut ids);
+    }
 
     tx.commit().await?;
-    let record = FastaSeqResult {
-        id: inserted_record.seq_id,
-        desc: inserted_record.description,
-        gc: inserted_record.gc_content,
-        n_orfs: inserted_record.n_orfs,
-        is_valid: inserted_record.is_valid,
-        seq_len: inserted_record.seq_len,
-    };
-    Ok(record)
+    Ok(record_ids)
 }

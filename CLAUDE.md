@@ -43,20 +43,24 @@ src/
 │   ├── layout.tsx             # root layout, fonts, metadata
 │   ├── page.tsx                # "/" — splash/welcome screen: motif, product blurb,
 │   │   "Get started" (routes to /import via next/navigation's useRouter)
-│   └── import/page.tsx          # "/import" — windowed shell + FastqAnalyserApp
+│   ├── import/page.tsx          # "/import" — windowed shell + FastqAnalyserApp
+│   └── runs/page.tsx            # "/runs" — windowed shell + RunsList
 ├── components/
 │   ├── app-shell.tsx, rail-nav.tsx, title-bar.tsx, toolbar.tsx, theme-switch.tsx,
-│   │   theme-provider.tsx        # windowed shell chrome (see PR #38)
+│   │   theme-provider.tsx        # windowed shell chrome (see PR #38); rail items route to /<id>
 │   ├── brand/                    # dna-motif.tsx, wordmark.tsx — brand components
-│   ├── fastq-analyser-app.tsx  # 'use client' — owns text/file input and results state (was App.jsx)
+│   ├── fastq-analyser-app.tsx  # 'use client' — text/file input; Submit analyses, saves the run, routes to /runs
+│   ├── runs-list.tsx            # 'use client' — table of saved runs from list_runs, with confirm-to-delete
 │   ├── file-input.tsx, text-input.tsx, format-toggle.tsx, loading-indicator.tsx,
 │   │   results-dialog.tsx, fasta-result-panel.tsx, fastq-result-panel.tsx
-│   └── ui/                      # shadcn/ui primitives (button, dialog, accordion, input, textarea, switch, label)
+│   └── ui/                      # shadcn/ui primitives (button, dialog, accordion, input, textarea, switch, label, table, alert-dialog)
 ├── lib/
-│   ├── analysis.ts             # invoke() wrappers calling into the Tauri commands below (was analysis.jsx)
+│   ├── analysis.ts             # invoke() wrappers for the analyse_* commands, returning RunRecords
+│   ├── runs.ts                 # invoke() wrappers for save_run / list_runs / delete_run
 │   └── utils.ts                  # shadcn's `cn()` class-merging helper
 └── types/
-    └── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs
+    ├── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs
+    └── runs.ts                  # Run / RunRecords TS types matching models.rs's serde JSON shape
 
 src-tauri/src/
 ├── main.rs / lib.rs           # registers the #[tauri::command] handlers below, plugins (dialog, log), AppState (db pool)
@@ -92,7 +96,8 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
   `From` impls so callers only see `models.rs` types.
 - Analysis commands (`commands/analysis.rs`): `analyse_fastq_sequences`, `analyse_fastq_file`,
   `analyse_fasta_sequences`, `analyse_fasta_file`. The `_file` variants transparently gunzip `.gz` inputs and delete
-  the extracted copy afterwards.
+  the extracted copy afterwards. They're `#[tauri::command(async)]` so analysis runs off the main thread and doesn't
+  freeze the window.
 - Run commands (`commands/run.rs`): `save_run` (returns the new run id), `load_run`, `list_runs`, `delete_run`.
 
 ## Current Capabilities

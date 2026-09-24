@@ -3,7 +3,7 @@ use crate::models::{FastaSeqResult, FastqSeqResult};
 use crate::services::io::{read_fasta, read_fastq};
 use bio::io::{fasta, fastq};
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn analyse_fastq_sequences(sequences: &str) -> Vec<FastqSeqResult> {
     let reader = fastq::Reader::new(sequences.as_bytes());
     let records: Vec<fastq::Record> = reader
@@ -16,7 +16,7 @@ pub fn analyse_fastq_sequences(sequences: &str) -> Vec<FastqSeqResult> {
     results
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
     let reader = read_fastq(path);
     let records: Vec<fastq::Record> = reader
@@ -37,7 +37,7 @@ pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
     results
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn analyse_fasta_sequences(sequences: &str) -> Vec<FastaSeqResult> {
     let reader = fasta::Reader::new(sequences.as_bytes());
     let records: Vec<fasta::Record> = reader
@@ -50,7 +50,7 @@ pub fn analyse_fasta_sequences(sequences: &str) -> Vec<FastaSeqResult> {
     results
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
     let reader = read_fasta(path);
     let records: Vec<fasta::Record> = reader

@@ -46,33 +46,6 @@ pub struct Record {
     pub phred_score: Option<u32>,
 }
 
-impl Into<FastaSeqResult> for Record {
-    fn into(self) -> FastaSeqResult {
-        FastaSeqResult {
-            id: self.seq_id,
-            desc: self.description,
-            gc: self.gc_content,
-            n_orfs: self.n_orfs,
-            is_valid: self.is_valid,
-            seq_len: self.seq_len,
-        }
-    }
-}
-
-impl Into<FastqSeqResult> for Record {
-    fn into(self) -> FastqSeqResult {
-        FastqSeqResult {
-            id: self.seq_id,
-            desc: self.description,
-            gc: self.gc_content,
-            n_orfs: self.n_orfs,
-            is_valid: self.is_valid,
-            seq_len: self.seq_len,
-            phred_score: self.phred_score.unwrap(),
-        }
-    }
-}
-
 impl From<FastaSeqResult> for Record {
     fn from(value: FastaSeqResult) -> Self {
         Record {

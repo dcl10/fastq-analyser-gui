@@ -101,7 +101,7 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
 - Record analysis is single-threaded — `analyse_fastq_records`/`analyse_fasta_records` loop over records
   sequentially (tracked in an open issue for multithreaded analysis).
 - Runs persist to SQLite via `services::run`. `create_run` inserts the run and its records in a single transaction;
-  `delete_run` relies on `ON DELETE CASCADE` to remove records. Unit tests for these services are tracked in #55.
+  `delete_run` relies on `ON DELETE CASCADE` to remove records.
 
 ## Coding Conventions
 

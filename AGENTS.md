@@ -50,13 +50,13 @@ src/
 │   │   theme-provider.tsx        # windowed shell chrome (see PR #38); rail items route to /<id>
 │   ├── brand/                    # dna-motif.tsx, wordmark.tsx — brand components
 │   ├── fastq-analyser-app.tsx  # 'use client' — text/file input; Submit analyses, saves the run, routes to /runs
-│   ├── runs-list.tsx            # 'use client' — table of saved runs from list_runs
+│   ├── runs-list.tsx            # 'use client' — table of saved runs from list_runs, with confirm-to-delete
 │   ├── file-input.tsx, text-input.tsx, format-toggle.tsx, loading-indicator.tsx,
 │   │   results-dialog.tsx, fasta-result-panel.tsx, fastq-result-panel.tsx
-│   └── ui/                      # shadcn/ui primitives (button, dialog, accordion, input, textarea, switch, label, table)
+│   └── ui/                      # shadcn/ui primitives (button, dialog, accordion, input, textarea, switch, label, table, alert-dialog)
 ├── lib/
 │   ├── analysis.ts             # invoke() wrappers for the analyse_* commands, returning RunRecords
-│   ├── runs.ts                 # invoke() wrappers for save_run / list_runs
+│   ├── runs.ts                 # invoke() wrappers for save_run / list_runs / delete_run
 │   └── utils.ts                  # shadcn's `cn()` class-merging helper
 └── types/
     ├── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs

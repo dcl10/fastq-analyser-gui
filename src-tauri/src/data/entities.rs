@@ -6,6 +6,7 @@ use crate::models::{FastaSeqResult, FastqSeqResult, Run as RunModel, RunRecords}
 pub struct Run {
     pub id: u32,
     pub created_at: chrono::DateTime<Utc>,
+    #[sqlx(skip)]
     pub records: Option<Vec<Record>>,
     pub result_type: ResultType,
 }
@@ -43,33 +44,6 @@ pub struct Record {
     pub is_valid: bool,
     pub seq_len: u32,
     pub phred_score: Option<u32>,
-}
-
-impl Into<FastaSeqResult> for Record {
-    fn into(self) -> FastaSeqResult {
-        FastaSeqResult {
-            id: self.seq_id,
-            desc: self.description,
-            gc: self.gc_content,
-            n_orfs: self.n_orfs,
-            is_valid: self.is_valid,
-            seq_len: self.seq_len,
-        }
-    }
-}
-
-impl Into<FastqSeqResult> for Record {
-    fn into(self) -> FastqSeqResult {
-        FastqSeqResult {
-            id: self.seq_id,
-            desc: self.description,
-            gc: self.gc_content,
-            n_orfs: self.n_orfs,
-            is_valid: self.is_valid,
-            seq_len: self.seq_len,
-            phred_score: self.phred_score.unwrap(),
-        }
-    }
 }
 
 impl From<FastaSeqResult> for Record {

@@ -78,7 +78,7 @@ mod tests {
     use std::io::Write;
     use uuid::Uuid;
 
-    use crate::analysis::commands::{
+    use crate::commands::analysis::{
         analyse_fasta_file, analyse_fasta_sequences, analyse_fastq_file, analyse_fastq_sequences,
     };
 

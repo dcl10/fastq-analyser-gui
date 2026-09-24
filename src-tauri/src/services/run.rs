@@ -80,14 +80,23 @@ pub async fn get_run_with_records(pool: SqlitePool, run_id: u32) -> Result<RunMo
 
     match run.result_type {
         ResultType::Fasta => {
-            let records = list_records_for_run::<FastaSeqResult>(pool, run_id).await?;
+            let records: Vec<FastaSeqResult> = list_records_for_run(pool, run_id).await?;
             run.records = FastaRecords(records);
             Ok(run)
         }
         ResultType::Fastq => {
-            let records = list_records_for_run::<FastqSeqResult>(pool, run_id).await?;
+            let records: Vec<FastqSeqResult> = list_records_for_run(pool, run_id).await?;
             run.records = FastqRecords(records);
             Ok(run)
         }
     }
+}
+
+pub async fn delete_run(pool: SqlitePool, run_id: u32) -> Result<(), sqlx::Error> {
+    sqlx::query::<Sqlite>(r#"DELETE FROM runs WHERE id = ?1"#)
+        .bind(&run_id)
+        .execute(&pool)
+        .await?;
+
+    Ok(())
 }

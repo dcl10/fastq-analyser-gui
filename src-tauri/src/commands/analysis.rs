@@ -4,25 +4,25 @@ use crate::services::io::{read_fasta, read_fastq};
 use bio::io::{fasta, fastq};
 
 #[tauri::command(async)]
-pub fn analyse_fastq_sequences(sequences: &str) -> Vec<FastqSeqResult> {
+pub fn analyse_fastq_sequences(sequences: &str) -> Result<Vec<FastqSeqResult>, String> {
     let reader = fastq::Reader::new(sequences.as_bytes());
     let records: Vec<fastq::Record> = reader
         .records()
-        .map(|rec| rec.unwrap_or_default())
-        .collect();
+        .enumerate()
+        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
+        .collect::<Result<_, _>>()?;
 
-    let results = analyse_fastq_records(&records);
-
-    results
+    analyse_fastq_records(&records)
 }
 
 #[tauri::command(async)]
-pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
+pub fn analyse_fastq_file(path: &std::path::Path) -> Result<Vec<FastqSeqResult>, String> {
     let reader = read_fastq(path);
-    let records: Vec<fastq::Record> = reader
+    let records: Result<Vec<fastq::Record>, String> = reader
         .records()
-        .map(|rec| rec.unwrap_or_default())
-        .collect();
+        .enumerate()
+        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
+        .collect::<Result<_, _>>();
 
     let path_str = path.to_str().unwrap();
     if path_str.ends_with(".gz") {
@@ -32,31 +32,29 @@ pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
             Err(_) => (),
         }
     }
-    let results = analyse_fastq_records(&records);
-
-    results
+    analyse_fastq_records(&records?)
 }
 
 #[tauri::command(async)]
-pub fn analyse_fasta_sequences(sequences: &str) -> Vec<FastaSeqResult> {
+pub fn analyse_fasta_sequences(sequences: &str) -> Result<Vec<FastaSeqResult>, String> {
     let reader = fasta::Reader::new(sequences.as_bytes());
     let records: Vec<fasta::Record> = reader
         .records()
-        .map(|rec| rec.unwrap_or_default())
-        .collect();
+        .enumerate()
+        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
+        .collect::<Result<_, _>>()?;
 
-    let results = analyse_fasta_records(&records);
-
-    results
+    analyse_fasta_records(&records)
 }
 
 #[tauri::command(async)]
-pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
+pub fn analyse_fasta_file(path: &std::path::Path) -> Result<Vec<FastaSeqResult>, String> {
     let reader = read_fasta(path);
-    let records: Vec<fasta::Record> = reader
+    let records: Result<Vec<fasta::Record>, String> = reader
         .records()
-        .map(|rec| rec.unwrap_or_default())
-        .collect();
+        .enumerate()
+        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
+        .collect::<Result<_, _>>();
 
     let path_str = path.to_str().unwrap();
     if path_str.ends_with(".gz") {
@@ -66,9 +64,8 @@ pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
             Err(_) => (),
         }
     }
-    let results = analyse_fasta_records(&records);
 
-    results
+    analyse_fasta_records(&records?)
 }
 
 #[cfg(test)]
@@ -139,7 +136,8 @@ mod tests {
         fqs_str.push_str("@id description\nGCGC\n+\n!!!!\n");
 
         let results = analyse_fastq_sequences(fqs_str.as_str());
-        assert_eq!(results.len(), 2);
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 2);
     }
 
     #[test]
@@ -147,8 +145,7 @@ mod tests {
         let missing_sequence = "@id description\n\n+\n!!!!\n";
 
         let results = analyse_fastq_sequences(missing_sequence);
-        assert_eq!(results.len(), 1);
-        assert!(!results[0].is_valid);
+        assert!(results.is_err());
     }
 
     #[test]
@@ -156,8 +153,7 @@ mod tests {
         let missing_quality = "@id description\nATAT\n+\n\n";
 
         let results = analyse_fastq_sequences(missing_quality);
-        assert_eq!(results.len(), 1);
-        assert!(!results[0].is_valid);
+        assert!(results.is_err());
     }
 
     #[test]
@@ -168,10 +164,8 @@ mod tests {
         assert!(create_test_fq_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
-        assert_eq!(results.len(), 20);
-        for result in results {
-            assert!(result.is_valid)
-        }
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 20);
     }
 
     #[test]
@@ -184,10 +178,40 @@ mod tests {
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
         assert!(!test_file_unpacked.exists());
-        assert_eq!(results.len(), 20);
-        for result in results {
-            assert!(result.is_valid)
-        }
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 20);
+    }
+
+    #[test]
+    fn test_fasta_file_zipped_as_fastq_removes_unpacked() {
+        let file_name = format!("test_fasta_{}.fa.gz", Uuid::new_v4());
+        let unpacked_file_name = file_name.replace(".gz", "");
+        let test_file_name = std::path::Path::new(&file_name);
+        let test_file_unpacked = std::path::Path::new(&unpacked_file_name);
+        assert!(create_test_fagz_file(test_file_name).is_ok());
+        let results = analyse_fastq_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
+        assert!(!test_file_unpacked.exists());
+        assert!(results.is_err());
+    }
+
+    #[test]
+    fn test_fasta_sequences_as_fastq() {
+        let fasta = ">id description\nATAT\n>id2 description\nGCGC\n";
+
+        let err = analyse_fastq_sequences(fasta).unwrap_err();
+        assert!(err.contains("expected '@'"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_fasta_file_as_fastq() {
+        let file_name = format!("test_fasta_{}.fa", Uuid::new_v4());
+        let test_file_name = std::path::Path::new(&file_name);
+        assert!(create_test_fa_file(test_file_name).is_ok());
+        let results = analyse_fastq_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
+        let err = results.unwrap_err();
+        assert!(err.contains("expected '@'"), "unexpected error: {err}");
     }
 
     #[test]
@@ -196,7 +220,8 @@ mod tests {
         fas_str.push_str(">id description\nGCGC\n");
 
         let results = analyse_fasta_sequences(fas_str.as_str());
-        assert_eq!(results.len(), 2);
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 2);
     }
 
     #[test]
@@ -204,9 +229,47 @@ mod tests {
         let missing_sequence = ">id description\n";
 
         let results = analyse_fasta_sequences(missing_sequence);
+        assert!(results.is_ok());
+        let results = results.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].seq_len, 0);
-        assert!(results[0].is_valid)
+    }
+
+    #[test]
+    fn test_fastq_sequences_as_fasta() {
+        let fastq = "@id description\nATAT\n+\n!!!!\n";
+
+        let err = analyse_fasta_sequences(fastq).unwrap_err();
+        assert!(err.contains("Expected >"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_fastq_file_as_fasta() {
+        let file_name = format!("test_fastq_{}.fq", Uuid::new_v4());
+        let test_file_name = std::path::Path::new(&file_name);
+        assert!(create_test_fq_file(test_file_name).is_ok());
+        let results = analyse_fasta_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
+        let err = results.unwrap_err();
+        assert!(err.contains("Expected >"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_wrapped_fasta_sequence() {
+        let wrapped = ">id description\nATATATAT\nGCGCGCGC\nATG\n";
+
+        let results = analyse_fasta_sequences(wrapped).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].seq_len, 19);
+    }
+
+    #[test]
+    fn test_wrapped_fasta_sequence_crlf() {
+        let wrapped = ">id description\r\nATATATAT\r\nGCGCGCGC\r\nATG\r\n";
+
+        let results = analyse_fasta_sequences(wrapped).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].seq_len, 19);
     }
 
     #[test]
@@ -216,10 +279,8 @@ mod tests {
         assert!(create_test_fa_file(test_file_name).is_ok());
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
-        assert_eq!(results.len(), 20);
-        for result in results {
-            assert!(result.is_valid)
-        }
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 20);
     }
 
     #[test]
@@ -232,9 +293,7 @@ mod tests {
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
         assert!(!test_file_unpacked.exists());
-        assert_eq!(results.len(), 20);
-        for result in results {
-            assert!(result.is_valid)
-        }
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 20);
     }
 }

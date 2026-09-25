@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use crate::models::{FastaSeqResult, FastqSeqResult};
 use bio::io::{fasta, fastq};
 use bio::seq_analysis::{gc, orf};

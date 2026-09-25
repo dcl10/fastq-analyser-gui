@@ -12,19 +12,17 @@ pub fn analyse_fastq_sequences(sequences: &str) -> Result<Vec<FastqSeqResult>, S
         .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
         .collect::<Result<_, _>>()?;
 
-    let results = analyse_fastq_records(&records)?;
-
-    Ok(results)
+    analyse_fastq_records(&records)
 }
 
 #[tauri::command(async)]
 pub fn analyse_fastq_file(path: &std::path::Path) -> Result<Vec<FastqSeqResult>, String> {
     let reader = read_fastq(path);
-    let records: Vec<fastq::Record> = reader
+    let records: Result<Vec<fastq::Record>, String> = reader
         .records()
         .enumerate()
         .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
-        .collect::<Result<_, _>>()?;
+        .collect::<Result<_, _>>();
 
     let path_str = path.to_str().unwrap();
     if path_str.ends_with(".gz") {
@@ -34,9 +32,7 @@ pub fn analyse_fastq_file(path: &std::path::Path) -> Result<Vec<FastqSeqResult>,
             Err(_) => (),
         }
     }
-    let results = analyse_fastq_records(&records)?;
-
-    Ok(results)
+    analyse_fastq_records(&records?)
 }
 
 #[tauri::command(async)]
@@ -48,19 +44,17 @@ pub fn analyse_fasta_sequences(sequences: &str) -> Result<Vec<FastaSeqResult>, S
         .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
         .collect::<Result<_, _>>()?;
 
-    let results = analyse_fasta_records(&records)?;
-
-    Ok(results)
+    analyse_fasta_records(&records)
 }
 
 #[tauri::command(async)]
 pub fn analyse_fasta_file(path: &std::path::Path) -> Result<Vec<FastaSeqResult>, String> {
     let reader = read_fasta(path);
-    let records: Vec<fasta::Record> = reader
+    let records: Result<Vec<fasta::Record>, String> = reader
         .records()
         .enumerate()
         .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
-        .collect::<Result<_, _>>()?;
+        .collect::<Result<_, _>>();
 
     let path_str = path.to_str().unwrap();
     if path_str.ends_with(".gz") {
@@ -70,9 +64,8 @@ pub fn analyse_fasta_file(path: &std::path::Path) -> Result<Vec<FastaSeqResult>,
             Err(_) => (),
         }
     }
-    let results = analyse_fasta_records(&records)?;
 
-    Ok(results)
+    analyse_fasta_records(&records?)
 }
 
 #[cfg(test)]

@@ -12,7 +12,7 @@ pub fn analyse_fastq_sequences(sequences: &str) -> Result<Vec<FastqSeqResult>, S
         .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
         .collect::<Result<_, _>>()?;
 
-    let results = analyse_fastq_records(&records);
+    let results = analyse_fastq_records(&records)?;
 
     Ok(results)
 }
@@ -34,31 +34,33 @@ pub fn analyse_fastq_file(path: &std::path::Path) -> Result<Vec<FastqSeqResult>,
             Err(_) => (),
         }
     }
-    let results = analyse_fastq_records(&records);
+    let results = analyse_fastq_records(&records)?;
 
     Ok(results)
 }
 
 #[tauri::command(async)]
-pub fn analyse_fasta_sequences(sequences: &str) -> Vec<FastaSeqResult> {
+pub fn analyse_fasta_sequences(sequences: &str) -> Result<Vec<FastaSeqResult>, String> {
     let reader = fasta::Reader::new(sequences.as_bytes());
     let records: Vec<fasta::Record> = reader
         .records()
-        .map(|rec| rec.unwrap_or_default())
-        .collect();
+        .enumerate()
+        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
+        .collect::<Result<_, _>>()?;
 
-    let results = analyse_fasta_records(&records);
+    let results = analyse_fasta_records(&records)?;
 
-    results
+    Ok(results)
 }
 
 #[tauri::command(async)]
-pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
+pub fn analyse_fasta_file(path: &std::path::Path) -> Result<Vec<FastaSeqResult>, String> {
     let reader = read_fasta(path);
     let records: Vec<fasta::Record> = reader
         .records()
-        .map(|rec| rec.unwrap_or_default())
-        .collect();
+        .enumerate()
+        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
+        .collect::<Result<_, _>>()?;
 
     let path_str = path.to_str().unwrap();
     if path_str.ends_with(".gz") {
@@ -68,9 +70,9 @@ pub fn analyse_fasta_file(path: &std::path::Path) -> Vec<FastaSeqResult> {
             Err(_) => (),
         }
     }
-    let results = analyse_fasta_records(&records);
+    let results = analyse_fasta_records(&records)?;
 
-    results
+    Ok(results)
 }
 
 #[cfg(test)]
@@ -150,7 +152,7 @@ mod tests {
         let missing_sequence = "@id description\n\n+\n!!!!\n";
 
         let results = analyse_fastq_sequences(missing_sequence);
-        assert!(results.is_err())
+        assert!(results.is_err());
     }
 
     #[test]
@@ -158,8 +160,7 @@ mod tests {
         let missing_quality = "@id description\nATAT\n+\n\n";
 
         let results = analyse_fastq_sequences(missing_quality);
-        assert!(results.is_ok());
-        assert_eq!(results.unwrap().len(), 1);
+        assert!(results.is_err());
     }
 
     #[test]
@@ -194,7 +195,8 @@ mod tests {
         fas_str.push_str(">id description\nGCGC\n");
 
         let results = analyse_fasta_sequences(fas_str.as_str());
-        assert_eq!(results.len(), 2);
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 2);
     }
 
     #[test]
@@ -202,6 +204,8 @@ mod tests {
         let missing_sequence = ">id description\n";
 
         let results = analyse_fasta_sequences(missing_sequence);
+        assert!(results.is_ok());
+        let results = results.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].seq_len, 0);
     }
@@ -213,7 +217,8 @@ mod tests {
         assert!(create_test_fa_file(test_file_name).is_ok());
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
-        assert_eq!(results.len(), 20);
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 20);
     }
 
     #[test]
@@ -226,6 +231,7 @@ mod tests {
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
         assert!(!test_file_unpacked.exists());
-        assert_eq!(results.len(), 20);
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 20);
     }
 }

@@ -9,7 +9,6 @@ pub struct FastqSeqResult {
     pub desc: Option<String>,
     pub gc: f32,
     pub n_orfs: u32,
-    pub is_valid: bool,
     pub phred_score: u32,
     pub seq_len: u32,
 }
@@ -21,7 +20,6 @@ impl Default for FastqSeqResult {
             desc: None,
             gc: 0.0,
             n_orfs: 0,
-            is_valid: false,
             phred_score: 0,
             seq_len: 0,
         }
@@ -35,7 +33,6 @@ impl From<RecordEntity> for FastqSeqResult {
             desc: value.description,
             gc: value.gc_content,
             n_orfs: value.n_orfs,
-            is_valid: value.is_valid,
             seq_len: value.seq_len,
             phred_score: value.phred_score.unwrap(),
         }
@@ -48,7 +45,6 @@ pub struct FastaSeqResult {
     pub desc: Option<String>,
     pub gc: f32,
     pub n_orfs: u32,
-    pub is_valid: bool,
     pub seq_len: u32,
 }
 
@@ -59,7 +55,6 @@ impl Default for FastaSeqResult {
             desc: None,
             gc: 0.0,
             n_orfs: 0,
-            is_valid: false,
             seq_len: 0,
         }
     }
@@ -72,7 +67,6 @@ impl From<RecordEntity> for FastaSeqResult {
             desc: value.description,
             gc: value.gc_content,
             n_orfs: value.n_orfs,
-            is_valid: value.is_valid,
             seq_len: value.seq_len,
         }
     }

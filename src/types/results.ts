@@ -5,7 +5,6 @@ interface BaseSeqResult {
   desc: string | null;
   gc: number;
   n_orfs: number;
-  is_valid: boolean;
   seq_len: number;
 }
 

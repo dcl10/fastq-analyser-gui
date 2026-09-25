@@ -93,7 +93,7 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
 
 ## Key Types
 
-- `FastqSeqResult` / `FastaSeqResult` (`models.rs`) — `id`, `desc`, `gc`, `n_orfs`, `is_valid`, `seq_len`,
+- `FastqSeqResult` / `FastaSeqResult` (`models.rs`) — `id`, `desc`, `gc`, `n_orfs`, `seq_len`,
   `result_type` (`"fastq"`/`"fasta"`); `FastqSeqResult` additionally carries `phred_score`.
 - `Run` (`models.rs`) — `id`, `created_at`, `result_type`, and `records: RunRecords` (`FastaRecords(Vec<...>)` /
   `FastqRecords(Vec<...>)`). `data/entities.rs` holds the matching row types; services convert between the two with
@@ -115,12 +115,14 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
 ## Coding Conventions
 
 Rust (`src-tauri`):
+
 - Types: `PascalCase`; functions/variables: `snake_case`
 - `#[cfg(test)] mod tests` block at the bottom of each file; test functions prefixed `test_`
 - Keep `#[tauri::command]` functions in `commands/` thin — parsing and scoring logic belongs in `analysers.rs`, and
   database/file logic in `services/`
 
 Frontend (`src`):
+
 - TypeScript function components with hooks (`useState`/`useRef`) — no class components
 - Tailwind CSS + shadcn/ui for UI elements; add new primitives with `npx shadcn@latest add <component>` rather than
   hand-rolling them
@@ -158,6 +160,7 @@ When implementing a feature or bug fix:
 ## Dependencies
 
 Backend:
+
 - `bio` — FASTA/FASTQ parsing, GC content, ORF finding
 - `flate2` — gzip decompression
 - `serde` / `serde_json` — result (de)serialization
@@ -166,6 +169,7 @@ Backend:
 - `tauri` — desktop app shell and command bridge
 
 Frontend:
+
 - `next`, `react`, `react-dom` — app framework, statically exported for Tauri
 - `tailwindcss`, `shadcn` (dev-time CLI), `lucide-react` — styling and UI primitives/icons
 - `@tauri-apps/api` — `invoke()` bridge to the Rust commands

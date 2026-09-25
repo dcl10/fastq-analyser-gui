@@ -4,12 +4,13 @@ use bio::seq_analysis::{gc, orf};
 use bio::utils::TextSlice;
 use rayon::prelude::*;
 
-pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult> {
+pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Result<Vec<FastqSeqResult>, String> {
     // Iterate over results and find GC content and ORFs
-    let results = records
+    let results: Vec<FastqSeqResult> = records
         .par_iter()
-        .map(|rec| match rec.check() {
-            Ok(()) => FastqSeqResult {
+        .enumerate()
+        .map(|(i, rec)| match rec.check() {
+            Ok(()) => Ok(FastqSeqResult {
                 n_orfs: (find_orfs(rec.seq()) as u32),
                 id: rec.id().to_owned(),
                 desc: match rec.desc() {
@@ -17,28 +18,23 @@ pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult
                     None => None,
                 },
                 gc: gc::gc_content(rec.seq()),
-                is_valid: true,
                 phred_score: calc_phred_score(rec.qual()),
                 seq_len: (rec.seq().len() as u32),
-                ..Default::default()
-            },
-            Err(_) => FastqSeqResult {
-                id: "Invalid Record".to_owned(),
-                is_valid: false,
-                ..Default::default()
-            },
+            }),
+            Err(e) => Err(format!("Record {} ({}): {e}", i + 1, rec.id())),
         })
-        .collect();
+        .collect::<Result<_, _>>()?;
 
-    results
+    Ok(results)
 }
 
-pub fn analyse_fasta_records(records: &Vec<fasta::Record>) -> Vec<FastaSeqResult> {
+pub fn analyse_fasta_records(records: &Vec<fasta::Record>) -> Result<Vec<FastaSeqResult>, String> {
     // Iterate over results and find GC content and ORFs
-    let results = records
+    let results: Vec<FastaSeqResult> = records
         .par_iter()
-        .map(|rec| match rec.check() {
-            Ok(_) => FastaSeqResult {
+        .enumerate()
+        .map(|(i, rec)| match rec.check() {
+            Ok(_) => Ok(FastaSeqResult {
                 n_orfs: (find_orfs(rec.seq()) as u32),
                 id: rec.id().to_owned(),
                 desc: match rec.desc() {
@@ -46,19 +42,13 @@ pub fn analyse_fasta_records(records: &Vec<fasta::Record>) -> Vec<FastaSeqResult
                     None => None,
                 },
                 gc: gc::gc_content(rec.seq()),
-                is_valid: true,
                 seq_len: (rec.seq().len() as u32),
-                ..Default::default()
-            },
-            Err(_) => FastaSeqResult {
-                id: "Invalid Record".to_owned(),
-                is_valid: false,
-                ..Default::default()
-            },
+            }),
+            Err(e) => Err(format!("Record {} ({}): {e}", i + 1, rec.id())),
         })
-        .collect();
+        .collect::<Result<_, _>>()?;
 
-    results
+    Ok(results)
 }
 
 fn find_orfs(seq: TextSlice) -> usize {

@@ -36,13 +36,15 @@ export function FastqAnalyserApp() {
 
   // Change the file sequences in state
   const handleFileInput = async () => {
+    const extensions =
+      seqFormat === "fastq" ? ["fq", "fastq"] : ["fa", "fasta"];
     const selected = await open({
       directory: false,
       multiple: false,
       filters: [
         {
           name: "Sequence files",
-          extensions: ["fq", "fastq", "fa", "fasta"],
+          extensions,
         },
       ],
     });

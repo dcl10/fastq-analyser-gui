@@ -75,7 +75,7 @@ where
         SELECT id, run_id, seq_id, description, gc_content, n_orfs, seq_len, phred_score
         FROM records
         WHERE run_id = ?1
-        ORDER BY id DESC
+        ORDER BY id ASC
         "#,
     )
     .bind(run_id)

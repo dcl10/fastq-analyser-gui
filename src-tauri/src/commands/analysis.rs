@@ -4,25 +4,27 @@ use crate::services::io::{read_fasta, read_fastq};
 use bio::io::{fasta, fastq};
 
 #[tauri::command(async)]
-pub fn analyse_fastq_sequences(sequences: &str) -> Vec<FastqSeqResult> {
+pub fn analyse_fastq_sequences(sequences: &str) -> Result<Vec<FastqSeqResult>, String> {
     let reader = fastq::Reader::new(sequences.as_bytes());
     let records: Vec<fastq::Record> = reader
         .records()
-        .map(|rec| rec.unwrap_or_default())
-        .collect();
+        .enumerate()
+        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
+        .collect::<Result<_, _>>()?;
 
     let results = analyse_fastq_records(&records);
 
-    results
+    Ok(results)
 }
 
 #[tauri::command(async)]
-pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
+pub fn analyse_fastq_file(path: &std::path::Path) -> Result<Vec<FastqSeqResult>, String> {
     let reader = read_fastq(path);
     let records: Vec<fastq::Record> = reader
         .records()
-        .map(|rec| rec.unwrap_or_default())
-        .collect();
+        .enumerate()
+        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
+        .collect::<Result<_, _>>()?;
 
     let path_str = path.to_str().unwrap();
     if path_str.ends_with(".gz") {
@@ -34,7 +36,7 @@ pub fn analyse_fastq_file(path: &std::path::Path) -> Vec<FastqSeqResult> {
     }
     let results = analyse_fastq_records(&records);
 
-    results
+    Ok(results)
 }
 
 #[tauri::command(async)]
@@ -139,7 +141,8 @@ mod tests {
         fqs_str.push_str("@id description\nGCGC\n+\n!!!!\n");
 
         let results = analyse_fastq_sequences(fqs_str.as_str());
-        assert_eq!(results.len(), 2);
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 2);
     }
 
     #[test]
@@ -147,7 +150,7 @@ mod tests {
         let missing_sequence = "@id description\n\n+\n!!!!\n";
 
         let results = analyse_fastq_sequences(missing_sequence);
-        assert_eq!(results.len(), 1);
+        assert!(results.is_err())
     }
 
     #[test]
@@ -155,7 +158,8 @@ mod tests {
         let missing_quality = "@id description\nATAT\n+\n\n";
 
         let results = analyse_fastq_sequences(missing_quality);
-        assert_eq!(results.len(), 1);
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 1);
     }
 
     #[test]
@@ -166,7 +170,8 @@ mod tests {
         assert!(create_test_fq_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
-        assert_eq!(results.len(), 20);
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 20);
     }
 
     #[test]
@@ -179,7 +184,8 @@ mod tests {
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
         assert!(!test_file_unpacked.exists());
-        assert_eq!(results.len(), 20);
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 20);
     }
 
     #[test]

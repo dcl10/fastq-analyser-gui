@@ -183,6 +183,19 @@ mod tests {
     }
 
     #[test]
+    fn test_fasta_file_zipped_as_fastq_removes_unpacked() {
+        let file_name = format!("test_fasta_{}.fa.gz", Uuid::new_v4());
+        let unpacked_file_name = file_name.replace(".gz", "");
+        let test_file_name = std::path::Path::new(&file_name);
+        let test_file_unpacked = std::path::Path::new(&unpacked_file_name);
+        assert!(create_test_fagz_file(test_file_name).is_ok());
+        let results = analyse_fastq_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
+        assert!(!test_file_unpacked.exists());
+        assert!(results.is_err());
+    }
+
+    #[test]
     fn test_fasta_sequences_as_fastq() {
         let fasta = ">id description\nATAT\n>id2 description\nGCGC\n";
 

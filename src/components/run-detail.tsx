@@ -15,6 +15,7 @@ import {
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { Toolbar } from "@/components/toolbar";
 import { loadRun } from "@/lib/runs";
+import { pluralise } from "@/lib/utils";
 import type { FastaSeqResult, FastqSeqResult } from "@/types/results";
 import type { Run } from "@/types/runs";
 
@@ -52,7 +53,7 @@ export function RunDetail() {
     : [];
 
   const subtitle = run
-    ? `${run.result_type.toUpperCase()} · ${records.length.toLocaleString()} records · ${new Date(run.created_at).toLocaleString()}`
+    ? `${run.result_type.toUpperCase()} · ${pluralise(records.length, "record")} · ${new Date(run.created_at).toLocaleString()}`
     : undefined;
 
   return (

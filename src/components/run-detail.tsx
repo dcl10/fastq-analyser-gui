@@ -83,7 +83,6 @@ export function RunDetail() {
                 <TableRow>
                   <TableHead>Record</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Valid</TableHead>
                   <TableHead className="text-right">Length</TableHead>
                   <TableHead className="text-right">GC %</TableHead>
                   <TableHead className="text-right">ORFs</TableHead>
@@ -92,7 +91,7 @@ export function RunDetail() {
               </TableHeader>
               <TableBody>
                 {records.map((record, index) => (
-                  // Record ids aren't unique (every invalid record is "Invalid Record"), so key on position
+                  // Record ids aren't guaranteed unique within a file, so key on position
                   <TableRow key={index}>
                     <TableCell className="font-mono">{record.id}</TableCell>
                     <TableCell
@@ -100,9 +99,6 @@ export function RunDetail() {
                       title={record.desc ?? undefined}
                     >
                       {record.desc ?? "–"}
-                    </TableCell>
-                    <TableCell className={record.is_valid ? undefined : "text-destructive"}>
-                      {record.is_valid ? "Yes" : "No"}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {record.seq_len.toLocaleString()}

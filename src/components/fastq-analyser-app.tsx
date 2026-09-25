@@ -57,9 +57,20 @@ export function FastqAnalyserApp() {
     setFilePath(selected ?? "");
   };
 
-  // Change the sequence format
+  // Clear the selected file
+  const clearFile = () => {
+    const fileInputEl = document.getElementById(
+      "file-input",
+    ) as HTMLInputElement | null;
+    if (fileInputEl) fileInputEl.value = "";
+    fileSequences.current = "";
+    setFilePath("");
+  };
+
+  // Change the sequence format, clearing any file picked for the old format
   const handleFormatSwitch = (checked: boolean) => {
     setSeqFormat(checked ? "fastq" : "fasta");
+    clearFile();
   };
 
   // Clear the input fields and reset the state
@@ -70,12 +81,7 @@ export function FastqAnalyserApp() {
     if (textInputEl) textInputEl.value = "";
     textSequences.current = "";
 
-    const fileInputEl = document.getElementById(
-      "file-input",
-    ) as HTMLInputElement | null;
-    if (fileInputEl) fileInputEl.value = "";
-    fileSequences.current = "";
-    setFilePath("");
+    clearFile();
   };
 
   // Analyse the text or file sequences, save them as a run, then show the runs list

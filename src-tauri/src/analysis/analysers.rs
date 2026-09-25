@@ -22,8 +22,9 @@ pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult
                 seq_len: (rec.seq().len() as u32),
                 ..Default::default()
             },
-            Err(_) => FastqSeqResult {
+            Err(e) => FastqSeqResult {
                 id: "Invalid Record".to_owned(),
+                desc: Some(e.to_string()),
                 is_valid: false,
                 ..Default::default()
             },
@@ -50,8 +51,9 @@ pub fn analyse_fasta_records(records: &Vec<fasta::Record>) -> Vec<FastaSeqResult
                 seq_len: (rec.seq().len() as u32),
                 ..Default::default()
             },
-            Err(_) => FastaSeqResult {
+            Err(e) => FastaSeqResult {
                 id: "Invalid Record".to_owned(),
+                desc: Some(e.to_string()),
                 is_valid: false,
                 ..Default::default()
             },

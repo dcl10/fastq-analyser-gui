@@ -190,6 +190,25 @@ mod tests {
     }
 
     #[test]
+    fn test_fasta_sequences_as_fastq() {
+        let fasta = ">id description\nATAT\n>id2 description\nGCGC\n";
+
+        let err = analyse_fastq_sequences(fasta).unwrap_err();
+        assert!(err.contains("expected '@'"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_fasta_file_as_fastq() {
+        let file_name = format!("test_fasta_{}.fa", Uuid::new_v4());
+        let test_file_name = std::path::Path::new(&file_name);
+        assert!(create_test_fa_file(test_file_name).is_ok());
+        let results = analyse_fastq_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
+        let err = results.unwrap_err();
+        assert!(err.contains("expected '@'"), "unexpected error: {err}");
+    }
+
+    #[test]
     fn test_analyse_fasta_sequences() {
         let mut fas_str = ">id description\nATAT\n".to_owned();
         fas_str.push_str(">id description\nGCGC\n");
@@ -208,6 +227,43 @@ mod tests {
         let results = results.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].seq_len, 0);
+    }
+
+    #[test]
+    fn test_fastq_sequences_as_fasta() {
+        let fastq = "@id description\nATAT\n+\n!!!!\n";
+
+        let err = analyse_fasta_sequences(fastq).unwrap_err();
+        assert!(err.contains("Expected >"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_fastq_file_as_fasta() {
+        let file_name = format!("test_fastq_{}.fq", Uuid::new_v4());
+        let test_file_name = std::path::Path::new(&file_name);
+        assert!(create_test_fq_file(test_file_name).is_ok());
+        let results = analyse_fasta_file(test_file_name);
+        assert!(remove_test_file(test_file_name).is_ok());
+        let err = results.unwrap_err();
+        assert!(err.contains("Expected >"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_wrapped_fasta_sequence() {
+        let wrapped = ">id description\nATATATAT\nGCGCGCGC\nATG\n";
+
+        let results = analyse_fasta_sequences(wrapped).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].seq_len, 19);
+    }
+
+    #[test]
+    fn test_wrapped_fasta_sequence_crlf() {
+        let wrapped = ">id description\r\nATATATAT\r\nGCGCGCGC\r\nATG\r\n";
+
+        let results = analyse_fasta_sequences(wrapped).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].seq_len, 19);
     }
 
     #[test]

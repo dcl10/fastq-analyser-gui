@@ -17,7 +17,6 @@ pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult
                     None => None,
                 },
                 gc: gc::gc_content(rec.seq()),
-                is_valid: true,
                 phred_score: calc_phred_score(rec.qual()),
                 seq_len: (rec.seq().len() as u32),
                 ..Default::default()
@@ -25,7 +24,6 @@ pub fn analyse_fastq_records(records: &Vec<fastq::Record>) -> Vec<FastqSeqResult
             Err(e) => FastqSeqResult {
                 id: "Invalid Record".to_owned(),
                 desc: Some(e.to_string()),
-                is_valid: false,
                 ..Default::default()
             },
         })
@@ -47,14 +45,12 @@ pub fn analyse_fasta_records(records: &Vec<fasta::Record>) -> Vec<FastaSeqResult
                     None => None,
                 },
                 gc: gc::gc_content(rec.seq()),
-                is_valid: true,
                 seq_len: (rec.seq().len() as u32),
                 ..Default::default()
             },
             Err(e) => FastaSeqResult {
                 id: "Invalid Record".to_owned(),
                 desc: Some(e.to_string()),
-                is_valid: false,
                 ..Default::default()
             },
         })

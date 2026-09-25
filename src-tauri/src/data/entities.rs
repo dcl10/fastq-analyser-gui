@@ -41,7 +41,6 @@ pub struct Record {
     pub description: Option<String>,
     pub gc_content: f32,
     pub n_orfs: u32,
-    pub is_valid: bool,
     pub seq_len: u32,
     pub phred_score: Option<u32>,
 }
@@ -54,7 +53,6 @@ impl From<FastaSeqResult> for Record {
             description: value.desc,
             gc_content: value.gc,
             n_orfs: value.n_orfs,
-            is_valid: value.is_valid,
             seq_len: value.seq_len,
             phred_score: None,
         }
@@ -69,7 +67,6 @@ impl From<FastqSeqResult> for Record {
             description: value.desc,
             gc_content: value.gc,
             n_orfs: value.n_orfs,
-            is_valid: value.is_valid,
             seq_len: value.seq_len,
             phred_score: Some(value.phred_score),
         }

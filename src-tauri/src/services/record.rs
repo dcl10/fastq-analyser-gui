@@ -12,7 +12,7 @@ pub async fn create_records_from_fastq_results(
     for chunk in records.chunks(1000) {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             "INSERT INTO records \
-            (run_id, seq_id, description, gc_content, n_orfs, is_valid, seq_len, phred_score) ",
+            (run_id, seq_id, description, gc_content, n_orfs, seq_len, phred_score) ",
         );
 
         builder.push_values(chunk, |mut row, record| {
@@ -21,7 +21,6 @@ pub async fn create_records_from_fastq_results(
                 .push_bind(&record.desc)
                 .push_bind(record.gc)
                 .push_bind(record.n_orfs)
-                .push_bind(record.is_valid)
                 .push_bind(record.seq_len)
                 .push_bind(record.phred_score);
         });
@@ -45,7 +44,7 @@ pub async fn create_records_from_fasta_results(
     for chunk in records.chunks(1000) {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             "INSERT INTO records \
-            (run_id, seq_id, description, gc_content, n_orfs, is_valid, seq_len) ",
+            (run_id, seq_id, description, gc_content, n_orfs, seq_len) ",
         );
 
         builder.push_values(chunk, |mut row, record| {
@@ -54,7 +53,6 @@ pub async fn create_records_from_fasta_results(
                 .push_bind(&record.desc)
                 .push_bind(record.gc)
                 .push_bind(record.n_orfs)
-                .push_bind(record.is_valid)
                 .push_bind(record.seq_len);
         });
 
@@ -74,7 +72,7 @@ where
 {
     let records: Vec<T> = sqlx::query_as::<Sqlite, RecordEntity>(
         r#"
-        SELECT id, run_id, seq_id, description, gc_content, n_orfs, is_valid, seq_len, phred_score
+        SELECT id, run_id, seq_id, description, gc_content, n_orfs, seq_len, phred_score
         FROM records
         WHERE run_id = ?1
         ORDER BY id DESC

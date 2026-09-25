@@ -148,7 +148,6 @@ mod tests {
 
         let results = analyse_fastq_sequences(missing_sequence);
         assert_eq!(results.len(), 1);
-        assert!(!results[0].is_valid);
     }
 
     #[test]
@@ -157,7 +156,6 @@ mod tests {
 
         let results = analyse_fastq_sequences(missing_quality);
         assert_eq!(results.len(), 1);
-        assert!(!results[0].is_valid);
     }
 
     #[test]
@@ -169,9 +167,6 @@ mod tests {
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
         assert_eq!(results.len(), 20);
-        for result in results {
-            assert!(result.is_valid)
-        }
     }
 
     #[test]
@@ -185,9 +180,6 @@ mod tests {
         assert!(remove_test_file(test_file_name).is_ok());
         assert!(!test_file_unpacked.exists());
         assert_eq!(results.len(), 20);
-        for result in results {
-            assert!(result.is_valid)
-        }
     }
 
     #[test]
@@ -206,7 +198,6 @@ mod tests {
         let results = analyse_fasta_sequences(missing_sequence);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].seq_len, 0);
-        assert!(results[0].is_valid)
     }
 
     #[test]
@@ -217,9 +208,6 @@ mod tests {
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
         assert_eq!(results.len(), 20);
-        for result in results {
-            assert!(result.is_valid)
-        }
     }
 
     #[test]
@@ -233,8 +221,5 @@ mod tests {
         assert!(remove_test_file(test_file_name).is_ok());
         assert!(!test_file_unpacked.exists());
         assert_eq!(results.len(), 20);
-        for result in results {
-            assert!(result.is_valid)
-        }
     }
 }

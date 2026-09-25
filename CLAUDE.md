@@ -61,7 +61,7 @@ src/
 ├── lib/
 │   ├── analysis.ts             # invoke() wrappers for the analyse_* commands, returning RunRecords
 │   ├── runs.ts                 # invoke() wrappers for save_run / list_runs / load_run / delete_run
-│   └── utils.ts                  # shadcn's `cn()` class-merging helper
+│   └── utils.ts                  # shadcn's `cn()` class-merging helper; `pluralise()` for count labels
 └── types/
     ├── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs
     └── runs.ts                  # Run / RunRecords TS types matching models.rs's serde JSON shape

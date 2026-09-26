@@ -68,6 +68,12 @@ pub async fn list_runs(pool: SqlitePool, limit: u32, offset: u32) -> Result<Vec<
     Ok(runs)
 }
 
+pub async fn count_runs(pool: SqlitePool) -> Result<u32, sqlx::Error> {
+    sqlx::query_scalar::<Sqlite, u32>(r#"SELECT COUNT(*) FROM runs"#)
+        .fetch_one(&pool)
+        .await
+}
+
 pub async fn get_run_with_records(pool: SqlitePool, run_id: u32, limit: u32, offset: u32) -> Result<RunModel, sqlx::Error> {
     let mut run: RunModel = sqlx::query_as::<Sqlite, RunEntity>(
         r#"

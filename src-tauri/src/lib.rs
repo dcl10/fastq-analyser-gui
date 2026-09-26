@@ -36,7 +36,7 @@ pub fn run() {
                 let pool = data::db::init_db(&handle)
                     .await
                     .expect("Failed to initialise database");
-                handle.manage(AppState { db: pool });
+                handle.manage(AppState { db: pool, pagination_options: Pagination::default() });
                 Ok(())
             })
         })
@@ -45,6 +45,7 @@ pub fn run() {
             commands::analysis::analyse_fastq_file,
             commands::analysis::analyse_fasta_sequences,
             commands::analysis::analyse_fasta_file,
+            commands::record::list_records_for_run,
             commands::run::delete_run,
             commands::run::list_runs,
             commands::run::load_run,

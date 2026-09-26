@@ -20,3 +20,10 @@ pub async fn list_records_for_run(state: State<'_, AppState>, run_id: u32, resul
         },
     }
 }
+#[tauri::command]
+pub async fn count_record_pages(state: State<'_, AppState>, run_id: u32) -> Result<u32, String> {
+    let total = record::count_records_for_run(state.db.clone(), run_id)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(state.pagination_options.total_pages(total))
+}

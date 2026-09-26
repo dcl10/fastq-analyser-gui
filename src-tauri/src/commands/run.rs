@@ -35,3 +35,11 @@ pub async fn list_runs(state: State<'_, AppState>, page: u32) -> Result<Vec<RunM
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn count_run_pages(state: State<'_, AppState>) -> Result<u32, String> {
+    let total = crate::services::run::count_runs(state.db.clone())
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(state.pagination_options.total_pages(total))
+}

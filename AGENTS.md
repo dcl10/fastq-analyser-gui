@@ -53,34 +53,41 @@ src/
 │   │   theme-provider.tsx        # windowed shell chrome (see PR #38); rail items route to /<id>
 │   ├── brand/                    # dna-motif.tsx, wordmark.tsx — brand components
 │   ├── fastq-analyser-app.tsx  # 'use client' — text/file input; Submit analyses, saves the run, routes to /runs
-│   ├── runs-list.tsx            # 'use client' — table of saved runs from list_runs; rows open the detail
-│   │                            #   page, bin button confirms then deletes
-│   ├── run-detail.tsx           # 'use client' — one run's records (load_run) as a table
+│   ├── runs-list.tsx            # 'use client' — paged table of saved runs from list_runs; rows open the
+│   │                            #   detail page, bin button confirms then deletes
+│   ├── run-detail.tsx           # 'use client' — one run's records as a paged table: page 0 from load_run,
+│   │                            #   later pages from list_records_for_run
+│   ├── page-controls.tsx        # Previous/Next + "Page N of M" for a zero-based page; hidden for one page
 │   ├── file-input.tsx, text-input.tsx, format-toggle.tsx, loading-indicator.tsx
 │   └── ui/                      # shadcn/ui primitives (button, dialog, accordion, input, textarea, switch, label, table, alert-dialog)
 ├── lib/
 │   ├── analysis.ts             # invoke() wrappers for the analyse_* commands, returning RunRecords
-│   ├── runs.ts                 # invoke() wrappers for save_run / list_runs / load_run / delete_run
+│   ├── runs.ts                 # invoke() wrappers for the run commands and list_records_for_run, plus
+│   │                           #   count_run_pages / count_record_pages
 │   └── utils.ts                  # shadcn's `cn()` class-merging helper; `pluralise()` for count labels
 └── types/
     ├── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs
     └── runs.ts                  # Run / RunRecords TS types matching models.rs's serde JSON shape
 
 src-tauri/src/
-├── main.rs / lib.rs           # registers the #[tauri::command] handlers below, plugins (dialog, log), AppState (db pool)
+├── main.rs / lib.rs           # registers the #[tauri::command] handlers below, plugins (dialog, log), AppState (db
+│                              #   pool, pagination options)
 ├── models.rs                  # FastqSeqResult / FastaSeqResult / Run / RunRecords (serde structs)
 ├── analysis/
 │   └── analysers.rs           # analyse_fastq_records / analyse_fasta_records — GC%, ORF count, Phred score
 ├── commands/
 │   ├── analysis.rs            # tauri commands: *_sequences (raw text) and *_file (path) for both formats
-│   └── run.rs                 # tauri commands: save_run / load_run / list_runs / delete_run
+│   ├── record.rs              # tauri commands: list_records_for_run / count_record_pages
+│   └── run.rs                 # tauri commands: save_run / load_run / list_runs / count_run_pages / delete_run
 ├── data/
 │   ├── db.rs                  # init_db — SQLite pool (WAL, foreign keys on) + runs migrations
 │   └── entities.rs            # Run / Record / ResultType row types (sqlx::FromRow)
+├── options/
+│   └── pagination.rs          # Pagination { page_size } (default 100) — limit_offset(page), total_pages(total)
 └── services/
     ├── io.rs                  # file readers (transparent .gz extraction)
-    ├── run.rs                 # create_run / list_runs / get_run_with_records / delete_run
-    └── record.rs              # batch record inserts (per format) / list_records_for_run
+    ├── run.rs                 # create_run / list_runs / count_runs / get_run_with_records / delete_run
+    └── record.rs              # batch record inserts (per format) / list_records_for_run / count_records_for_run
 
 src-tauri/migrations/          # sqlx migrations (runs, records with ON DELETE CASCADE)
 ```
@@ -102,7 +109,11 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
   `analyse_fasta_sequences`, `analyse_fasta_file`. The `_file` variants transparently gunzip `.gz` inputs and delete
   the extracted copy afterwards. They're `#[tauri::command(async)]` so analysis runs off the main thread and doesn't
   freeze the window.
-- Run commands (`commands/run.rs`): `save_run` (returns the new run id), `load_run`, `list_runs`, `delete_run`.
+- Run commands (`commands/run.rs`): `save_run` (returns the new run id), `load_run`, `list_runs`, `count_run_pages`,
+  `delete_run`. Record commands (`commands/record.rs`): `list_records_for_run`, `count_record_pages`.
+- `Pagination` (`options/pagination.rs`) — held on `AppState` as `pagination_options`. Pages are zero-based:
+  `list_runs` / `list_records_for_run` take a `page` and `load_run` returns page 0 of the run's records. The
+  `count_*_pages` commands return page counts (not row counts), so the page size lives only on the Rust side.
 
 ## Current Capabilities
 
@@ -111,6 +122,7 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
   sequentially (tracked in an open issue for multithreaded analysis).
 - Runs persist to SQLite via `services::run`. `create_run` inserts the run and its records in a single transaction;
   `delete_run` relies on `ON DELETE CASCADE` to remove records.
+- The runs list and run detail page are paginated (100 rows per page).
 
 ## Coding Conventions
 

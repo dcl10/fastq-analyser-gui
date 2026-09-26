@@ -90,3 +90,10 @@ where
 
     Ok(records)
 }
+
+pub async fn count_records_for_run(pool: SqlitePool, run_id: u32) -> Result<u32, sqlx::Error> {
+    sqlx::query_scalar::<Sqlite, u32>(r#"SELECT COUNT(*) FROM records WHERE run_id = ?1"#)
+        .bind(run_id)
+        .fetch_one(&pool)
+        .await
+}

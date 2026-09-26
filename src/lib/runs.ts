@@ -14,12 +14,14 @@ export async function saveRun(format: SeqFormat, records: RunRecords): Promise<n
   return invoke<number>("save_run", { run });
 }
 
-// Rows per page; mirrors DEFAULT_PAGE_SIZE in src-tauri/src/options/pagination.rs
-export const PAGE_SIZE = 100;
-
 // List one zero-based page of saved runs, newest first, without their records
 export async function listRuns(page: number): Promise<Run[]> {
   return invoke<Run[]>("list_runs", { page });
+}
+
+// Number of pages listRuns can return; 0 when there are no runs
+export async function countRunPages(): Promise<number> {
+  return invoke<number>("count_run_pages");
 }
 
 // Delete a run; its records are removed with it
@@ -39,4 +41,9 @@ export async function listRecordsForRun(
   page: number,
 ): Promise<RunRecords> {
   return invoke<RunRecords>("list_records_for_run", { runId, resultType, page });
+}
+
+// Number of pages listRecordsForRun can return for a run; 0 when it has no records
+export async function countRecordPages(runId: number): Promise<number> {
+  return invoke<number>("count_record_pages", { runId });
 }

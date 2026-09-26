@@ -15,6 +15,16 @@ impl Pagination {
     pub fn limit_offset(&self, page: u32) -> (u32, u32) {
         (self.page_size, page.saturating_mul(self.page_size))
     }
+
+    /// ## Description
+    /// Get the number of pages needed to show every row.
+    /// ## Arguments
+    /// - `total`: `u32` - The total number of rows.
+    /// ## Returns
+    /// `u32` - The number of pages, counting a partly filled last page.
+    pub fn total_pages(&self, total: u32) -> u32 {
+        total.div_ceil(self.page_size)
+    }
 }
 
 impl Default for Pagination {

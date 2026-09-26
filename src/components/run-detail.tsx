@@ -13,11 +13,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LoadingIndicator } from "@/components/loading-indicator";
+import { PageControls } from "@/components/page-controls";
 import { Toolbar } from "@/components/toolbar";
-import { loadRun } from "@/lib/runs";
-import { pluralise } from "@/lib/utils";
+import { listRecordsForRun, loadRun, PAGE_SIZE } from "@/lib/runs";
 import type { FastaSeqResult, FastqSeqResult } from "@/types/results";
-import type { Run } from "@/types/runs";
+import type { Run, RunRecords } from "@/types/runs";
+
+// One page of a run's records, or the error from fetching it, tagged with which run and page it is
+interface RecordsPage {
+  runId: number;
+  page: number;
+  records?: RunRecords;
+  error?: string;
+}
 
 // Per-base Phred score; invalid records have no length, so there's nothing to average
 function perBasePhred(record: FastqSeqResult): string {
@@ -31,8 +39,13 @@ export function RunDetail() {
   const isValidId = idParam !== null && Number.isInteger(runId) && runId > 0;
 
   const [loaded, setLoaded] = useState<{ runId: number; run?: Run; error?: string } | null>(null);
+  // Zero-based page of records, tied to its run so opening another run starts back at page 0
+  const [paging, setPaging] = useState({ runId, page: 0 });
+  const page = paging.runId === runId ? paging.page : 0;
+  const setPage = (page: number) => setPaging({ runId, page });
+  const [fetchedPage, setFetchedPage] = useState<RecordsPage | null>(null);
 
-  // Load the run and its records whenever the id in the URL changes
+  // Load the run and its first page of records whenever the id in the URL changes
   useEffect(() => {
     if (!isValidId) return;
     loadRun(runId)
@@ -44,16 +57,46 @@ export function RunDetail() {
   const current = loaded?.runId === runId ? loaded : null;
   const run = current?.run ?? null;
   const error = current?.error ?? "";
+  const resultType = run?.result_type;
 
-  const fastqRecords = run && "FastqRecords" in run.records ? run.records.FastqRecords : null;
-  const records: (FastaSeqResult | FastqSeqResult)[] = run
-    ? "FastqRecords" in run.records
-      ? run.records.FastqRecords
-      : run.records.FastaRecords
+  // Page 0 arrives with the run; fetch any later page on its own
+  useEffect(() => {
+    if (!resultType || page === 0) return;
+    let cancelled = false;
+    listRecordsForRun(runId, resultType, page)
+      .then((records) => !cancelled && setFetchedPage({ runId, page, records }))
+      .catch(
+        (e) =>
+          !cancelled &&
+          setFetchedPage({ runId, page, error: `Couldn't load page ${page + 1} of records: ${e}` }),
+      );
+    // Drop a slow response for a page the user has already moved away from
+    return () => {
+      cancelled = true;
+    };
+  }, [runId, resultType, page]);
+
+  const currentPage: RecordsPage | null =
+    page === 0
+      ? run && { runId, page, records: run.records }
+      : fetchedPage?.runId === runId && fetchedPage.page === page
+        ? fetchedPage
+        : null;
+  const pageRecords = currentPage?.records ?? null;
+  const pageError = currentPage?.error ?? "";
+
+  const fastqRecords =
+    pageRecords && "FastqRecords" in pageRecords ? pageRecords.FastqRecords : null;
+  const records: (FastaSeqResult | FastqSeqResult)[] = pageRecords
+    ? "FastqRecords" in pageRecords
+      ? pageRecords.FastqRecords
+      : pageRecords.FastaRecords
     : [];
+  // A short page is the last one; a full page may or may not have more after it
+  const hasNextPage = records.length === PAGE_SIZE;
 
   const subtitle = run
-    ? `${run.result_type.toUpperCase()} · ${pluralise(records.length, "record")} · ${new Date(run.created_at).toLocaleString()}`
+    ? `${run.result_type.toUpperCase()} · ${new Date(run.created_at).toLocaleString()}`
     : undefined;
 
   return (
@@ -76,8 +119,16 @@ export function RunDetail() {
             </p>
           ) : !run ? (
             <LoadingIndicator message="Loading run..." />
+          ) : pageError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {pageError}
+            </p>
+          ) : !pageRecords ? (
+            <LoadingIndicator message="Loading records..." />
           ) : records.length === 0 ? (
-            <p className="text-sm text-muted-foreground">This run has no records.</p>
+            <p className="text-sm text-muted-foreground">
+              {page === 0 ? "This run has no records." : "No more records."}
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -120,6 +171,15 @@ export function RunDetail() {
               </TableBody>
             </Table>
           )}
+
+          {run ? (
+            <PageControls
+              page={page}
+              hasNextPage={hasNextPage}
+              disabled={!pageRecords}
+              onPageChange={setPage}
+            />
+          ) : null}
         </div>
       </div>
     </>

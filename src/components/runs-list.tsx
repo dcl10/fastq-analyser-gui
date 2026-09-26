@@ -26,7 +26,7 @@ import {
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { PageControls } from "@/components/page-controls";
 import { Toolbar } from "@/components/toolbar";
-import { deleteRun, listRuns, PAGE_SIZE } from "@/lib/runs";
+import { countRunPages, deleteRun, listRuns } from "@/lib/runs";
 import type { Run } from "@/types/runs";
 
 const runDetailHref = (run: Run) => `/runs/detail?id=${run.id}`;
@@ -35,18 +35,22 @@ export function RunsList() {
   const router = useRouter();
   // Zero-based page of runs being shown
   const [page, setPage] = useState(0);
-  const [loaded, setLoaded] = useState<{ page: number; runs?: Run[]; error?: string } | null>(
-    null,
-  );
+  const [loaded, setLoaded] = useState<{
+    page: number;
+    runs?: Run[];
+    totalPages?: number;
+    error?: string;
+  } | null>(null);
   const [runToDelete, setRunToDelete] = useState<Run | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
-  // Load the current page of runs, newest first (list_runs sorts them), whenever the page changes
+  // Load the current page of runs, newest first (list_runs sorts them), and the page count
+  // whenever the page changes
   useEffect(() => {
     let cancelled = false;
-    listRuns(page)
-      .then((runs) => !cancelled && setLoaded({ page, runs }))
+    Promise.all([listRuns(page), countRunPages()])
+      .then(([runs, totalPages]) => !cancelled && setLoaded({ page, runs, totalPages }))
       .catch((e) => !cancelled && setLoaded({ page, error: `Couldn't load runs: ${e}` }));
     // Drop a slow response for a page the user has already moved away from
     return () => {
@@ -58,21 +62,21 @@ export function RunsList() {
   const current = loaded?.page === page ? loaded : null;
   const isLoading = current === null;
   const runs = current?.runs ?? [];
+  const totalPages = current?.totalPages ?? 0;
   const error = current?.error ?? "";
-  // A short page is the last one; a full page may or may not have more after it
-  const hasNextPage = runs.length === PAGE_SIZE;
 
-  // Delete the run the user confirmed, then refetch the page so later runs move up to fill it
+  // Delete the run the user confirmed, then refetch the page and page count so later runs move
+  // up to fill the gap
   const confirmDelete = async () => {
     if (!runToDelete) return;
     setDeleteError("");
     setIsDeleting(true);
     try {
       await deleteRun(runToDelete.id);
-      const refreshed = await listRuns(page);
-      // Deleting the only run on a later page leaves it empty, so step back a page
-      if (refreshed.length === 0 && page > 0) setPage(page - 1);
-      else setLoaded({ page, runs: refreshed });
+      const [refreshed, refreshedTotalPages] = await Promise.all([listRuns(page), countRunPages()]);
+      // Deleting the only run on the last page leaves it empty, so step back to the new last page
+      if (page > 0 && page >= refreshedTotalPages) setPage(refreshedTotalPages - 1);
+      else setLoaded({ page, runs: refreshed, totalPages: refreshedTotalPages });
     } catch (e) {
       setDeleteError(`Couldn't delete run #${runToDelete.id}: ${e}`);
     } finally {
@@ -83,7 +87,7 @@ export function RunsList() {
 
   return (
     <>
-      <Toolbar title="Runs" subtitle={`Page ${page + 1}`} />
+      <Toolbar title="Runs" />
 
       <AlertDialog
         open={runToDelete !== null}
@@ -121,9 +125,7 @@ export function RunsList() {
             </p>
           ) : runs.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              {page === 0
-                ? "No runs yet. Import some sequences to create one."
-                : "No more runs."}
+              No runs yet. Import some sequences to create one.
             </p>
           ) : (
             <Table>
@@ -175,7 +177,7 @@ export function RunsList() {
 
           <PageControls
             page={page}
-            hasNextPage={hasNextPage}
+            totalPages={totalPages}
             disabled={isLoading}
             onPageChange={setPage}
           />

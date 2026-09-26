@@ -48,14 +48,17 @@ pub async fn create_run(pool: SqlitePool, run: RunModel) -> Result<u32, sqlx::Er
     Ok(run_id)
 }
 
-pub async fn list_runs(pool: SqlitePool) -> Result<Vec<RunModel>, sqlx::Error> {
+pub async fn list_runs(pool: SqlitePool, limit: u32, offset: u32) -> Result<Vec<RunModel>, sqlx::Error> {
     let runs: Vec<RunModel> = sqlx::query_as::<Sqlite, RunEntity>(
         r#"
         SELECT id, created_at, result_type
         FROM runs
         ORDER BY created_at DESC
+        LIMIT ?1 OFFSET ?2
         "#,
     )
+    .bind(limit)
+    .bind(offset)
     .fetch_all(&pool)
     .await?
     .into_iter()
@@ -65,7 +68,13 @@ pub async fn list_runs(pool: SqlitePool) -> Result<Vec<RunModel>, sqlx::Error> {
     Ok(runs)
 }
 
-pub async fn get_run_with_records(pool: SqlitePool, run_id: u32) -> Result<RunModel, sqlx::Error> {
+pub async fn count_runs(pool: SqlitePool) -> Result<u32, sqlx::Error> {
+    sqlx::query_scalar::<Sqlite, u32>(r#"SELECT COUNT(*) FROM runs"#)
+        .fetch_one(&pool)
+        .await
+}
+
+pub async fn get_run_with_records(pool: SqlitePool, run_id: u32, limit: u32, offset: u32) -> Result<RunModel, sqlx::Error> {
     let mut run: RunModel = sqlx::query_as::<Sqlite, RunEntity>(
         r#"
         SELECT id, created_at, result_type
@@ -80,12 +89,12 @@ pub async fn get_run_with_records(pool: SqlitePool, run_id: u32) -> Result<RunMo
 
     match run.result_type {
         ResultType::Fasta => {
-            let records: Vec<FastaSeqResult> = list_records_for_run(pool, run_id).await?;
+            let records: Vec<FastaSeqResult> = list_records_for_run(pool, run_id, limit, offset).await?;
             run.records = FastaRecords(records);
             Ok(run)
         }
         ResultType::Fastq => {
-            let records: Vec<FastqSeqResult> = list_records_for_run(pool, run_id).await?;
+            let records: Vec<FastqSeqResult> = list_records_for_run(pool, run_id, limit, offset).await?;
             run.records = FastqRecords(records);
             Ok(run)
         }

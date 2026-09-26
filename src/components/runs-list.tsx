@@ -24,37 +24,59 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LoadingIndicator } from "@/components/loading-indicator";
+import { PageControls } from "@/components/page-controls";
 import { Toolbar } from "@/components/toolbar";
-import { deleteRun, listRuns } from "@/lib/runs";
+import { countRunPages, deleteRun, listRuns } from "@/lib/runs";
 import type { Run } from "@/types/runs";
 
 const runDetailHref = (run: Run) => `/runs/detail?id=${run.id}`;
 
 export function RunsList() {
   const router = useRouter();
-  const [runs, setRuns] = useState<Run[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  // Zero-based page of runs being shown
+  const [page, setPage] = useState(0);
+  const [loaded, setLoaded] = useState<{
+    page: number;
+    runs?: Run[];
+    totalPages?: number;
+    error?: string;
+  } | null>(null);
   const [runToDelete, setRunToDelete] = useState<Run | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
-  // Load every saved run once, newest first (list_runs sorts them)
+  // Load the current page of runs, newest first (list_runs sorts them), and the page count
+  // whenever the page changes
   useEffect(() => {
-    listRuns()
-      .then(setRuns)
-      .catch((e) => setError(`Couldn't load runs: ${e}`))
-      .finally(() => setIsLoading(false));
-  }, []);
+    let cancelled = false;
+    Promise.all([listRuns(page), countRunPages()])
+      .then(([runs, totalPages]) => !cancelled && setLoaded({ page, runs, totalPages }))
+      .catch((e) => !cancelled && setLoaded({ page, error: `Couldn't load runs: ${e}` }));
+    // Drop a slow response for a page the user has already moved away from
+    return () => {
+      cancelled = true;
+    };
+  }, [page]);
 
-  // Delete the run the user confirmed and drop it from the table
+  // Ignore a result left over from the previous page until this one loads
+  const current = loaded?.page === page ? loaded : null;
+  const isLoading = current === null;
+  const runs = current?.runs ?? [];
+  const totalPages = current?.totalPages ?? 0;
+  const error = current?.error ?? "";
+
+  // Delete the run the user confirmed, then refetch the page and page count so later runs move
+  // up to fill the gap
   const confirmDelete = async () => {
     if (!runToDelete) return;
     setDeleteError("");
     setIsDeleting(true);
     try {
       await deleteRun(runToDelete.id);
-      setRuns((current) => current.filter((run) => run.id !== runToDelete.id));
+      const [refreshed, refreshedTotalPages] = await Promise.all([listRuns(page), countRunPages()]);
+      // Deleting the only run on the last page leaves it empty, so step back to the new last page
+      if (page > 0 && page >= refreshedTotalPages) setPage(refreshedTotalPages - 1);
+      else setLoaded({ page, runs: refreshed, totalPages: refreshedTotalPages });
     } catch (e) {
       setDeleteError(`Couldn't delete run #${runToDelete.id}: ${e}`);
     } finally {
@@ -65,7 +87,7 @@ export function RunsList() {
 
   return (
     <>
-      <Toolbar title="Runs" subtitle={isLoading ? undefined : `${runs.length} saved`} />
+      <Toolbar title="Runs" />
 
       <AlertDialog
         open={runToDelete !== null}
@@ -152,6 +174,13 @@ export function RunsList() {
               </TableBody>
             </Table>
           )}
+
+          <PageControls
+            page={page}
+            totalPages={totalPages}
+            disabled={isLoading}
+            onPageChange={setPage}
+          />
         </div>
       </div>
     </>

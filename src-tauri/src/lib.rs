@@ -1,14 +1,18 @@
 use sqlx::SqlitePool;
 use tauri::Manager;
 
+use crate::options::pagination::Pagination;
+
 mod analysis;
 mod commands;
 mod data;
 mod models;
+mod options;
 mod services;
 
 pub struct AppState {
     pub db: SqlitePool,
+    pub pagination_options: Pagination
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -32,7 +36,7 @@ pub fn run() {
                 let pool = data::db::init_db(&handle)
                     .await
                     .expect("Failed to initialise database");
-                handle.manage(AppState { db: pool });
+                handle.manage(AppState { db: pool, pagination_options: Pagination::default() });
                 Ok(())
             })
         })
@@ -41,6 +45,9 @@ pub fn run() {
             commands::analysis::analyse_fastq_file,
             commands::analysis::analyse_fasta_sequences,
             commands::analysis::analyse_fasta_file,
+            commands::record::count_record_pages,
+            commands::record::list_records_for_run,
+            commands::run::count_run_pages,
             commands::run::delete_run,
             commands::run::list_runs,
             commands::run::load_run,

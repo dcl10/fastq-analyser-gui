@@ -15,7 +15,7 @@ import {
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { PageControls } from "@/components/page-controls";
 import { Toolbar } from "@/components/toolbar";
-import { listRecordsForRun, loadRun, PAGE_SIZE } from "@/lib/runs";
+import { countRecordPages, listRecordsForRun, loadRun } from "@/lib/runs";
 import type { FastaSeqResult, FastqSeqResult } from "@/types/results";
 import type { Run, RunRecords } from "@/types/runs";
 
@@ -38,24 +38,30 @@ export function RunDetail() {
   const runId = Number(idParam);
   const isValidId = idParam !== null && Number.isInteger(runId) && runId > 0;
 
-  const [loaded, setLoaded] = useState<{ runId: number; run?: Run; error?: string } | null>(null);
+  const [loaded, setLoaded] = useState<{
+    runId: number;
+    run?: Run;
+    totalPages?: number;
+    error?: string;
+  } | null>(null);
   // Zero-based page of records, tied to its run so opening another run starts back at page 0
   const [paging, setPaging] = useState({ runId, page: 0 });
   const page = paging.runId === runId ? paging.page : 0;
   const setPage = (page: number) => setPaging({ runId, page });
   const [fetchedPage, setFetchedPage] = useState<RecordsPage | null>(null);
 
-  // Load the run and its first page of records whenever the id in the URL changes
+  // Load the run, its first page of records and its page count whenever the id in the URL changes
   useEffect(() => {
     if (!isValidId) return;
-    loadRun(runId)
-      .then((run) => setLoaded({ runId, run }))
+    Promise.all([loadRun(runId), countRecordPages(runId)])
+      .then(([run, totalPages]) => setLoaded({ runId, run, totalPages }))
       .catch((e) => setLoaded({ runId, error: `Couldn't load run #${runId}: ${e}` }));
   }, [runId, isValidId]);
 
   // Ignore a result left over from a previously viewed run until this one loads
   const current = loaded?.runId === runId ? loaded : null;
   const run = current?.run ?? null;
+  const totalPages = current?.totalPages ?? 0;
   const error = current?.error ?? "";
   const resultType = run?.result_type;
 
@@ -92,8 +98,6 @@ export function RunDetail() {
       ? pageRecords.FastqRecords
       : pageRecords.FastaRecords
     : [];
-  // A short page is the last one; a full page may or may not have more after it
-  const hasNextPage = records.length === PAGE_SIZE;
 
   const subtitle = run
     ? `${run.result_type.toUpperCase()} · ${new Date(run.created_at).toLocaleString()}`
@@ -126,9 +130,7 @@ export function RunDetail() {
           ) : !pageRecords ? (
             <LoadingIndicator message="Loading records..." />
           ) : records.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {page === 0 ? "This run has no records." : "No more records."}
-            </p>
+            <p className="text-sm text-muted-foreground">This run has no records.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -175,7 +177,7 @@ export function RunDetail() {
           {run ? (
             <PageControls
               page={page}
-              hasNextPage={hasNextPage}
+              totalPages={totalPages}
               disabled={!pageRecords}
               onPageChange={setPage}
             />

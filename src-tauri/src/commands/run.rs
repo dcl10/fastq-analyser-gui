@@ -15,7 +15,8 @@ pub async fn save_run(state: State<'_, AppState>, run: RunModel) -> Result<u32, 
 
 #[tauri::command]
 pub async fn load_run(state: State<'_, AppState>, run_id: u32) -> Result<RunModel, String> {
-    get_run_with_records(state.db.clone(), run_id)
+    let (limit, offset) = state.pagination_options.limit_offset(0);
+    get_run_with_records(state.db.clone(), run_id, limit, offset)
         .await
         .map_err(|e| e.to_string())
 }
@@ -28,8 +29,9 @@ pub async fn delete_run(state: State<'_, AppState>, run_id: u32) -> Result<(), S
 }
 
 #[tauri::command]
-pub async fn list_runs(state: State<'_, AppState>) -> Result<Vec<RunModel>, String> {
-    crate::services::run::list_runs(state.db.clone())
+pub async fn list_runs(state: State<'_, AppState>, page: u32) -> Result<Vec<RunModel>, String> {
+    let (limit, offset) = state.pagination_options.limit_offset(page);
+    crate::services::run::list_runs(state.db.clone(), limit, offset)
         .await
         .map_err(|e| e.to_string())
 }

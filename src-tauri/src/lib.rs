@@ -1,14 +1,18 @@
 use sqlx::SqlitePool;
 use tauri::Manager;
 
+use crate::options::pagination::Pagination;
+
 mod analysis;
 mod commands;
 mod data;
 mod models;
+mod options;
 mod services;
 
 pub struct AppState {
     pub db: SqlitePool,
+    pub pagination_options: Pagination
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

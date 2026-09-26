@@ -32,3 +32,18 @@ impl Default for Pagination {
         Self { page_size: DEFAULT_PAGE_SIZE }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_total_pages() {
+        let pagination = Pagination { page_size: 100 };
+        assert_eq!(pagination.total_pages(0), 0);
+        assert_eq!(pagination.total_pages(1), 1);
+        assert_eq!(pagination.total_pages(100), 1);
+        assert_eq!(pagination.total_pages(101), 2);
+        assert_eq!(pagination.total_pages(1_000_000), 10_000);
+    }
+}

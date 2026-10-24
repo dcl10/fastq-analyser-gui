@@ -43,3 +43,32 @@ impl ThreadOptions {
         self.thread_count.unwrap_or_else(max_threads) as usize
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_rejects_zero() {
+        assert!(ThreadOptions { thread_count: Some(0) }.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_rejects_above_max() {
+        let options = ThreadOptions { thread_count: Some(max_threads() + 1) };
+        assert!(options.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_accepts_bounds() {
+        assert!(ThreadOptions { thread_count: None }.validate().is_ok());
+        assert!(ThreadOptions { thread_count: Some(1) }.validate().is_ok());
+        assert!(ThreadOptions { thread_count: Some(max_threads()) }.validate().is_ok());
+    }
+
+    #[test]
+    fn test_resolve() {
+        assert_eq!(ThreadOptions { thread_count: None }.resolve(), max_threads() as usize);
+        assert_eq!(ThreadOptions { thread_count: Some(1) }.resolve(), 1);
+    }
+}

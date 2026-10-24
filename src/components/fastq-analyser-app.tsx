@@ -16,9 +16,11 @@ import { FormatToggle } from "@/components/format-toggle";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { TextInput } from "@/components/text-input";
 import { Toolbar } from "@/components/toolbar";
-import { analyseFileSequences, analyseTextSequences } from "@/lib/analysis";
-import { saveRun } from "@/lib/runs";
+import { analyseTextSequences } from "@/lib/analysis";
+import { analyseAndSaveFile, saveRun } from "@/lib/runs";
+import { pluralise } from "@/lib/utils";
 import type { SeqFormat } from "@/types/results";
+import type { ImportProgress } from "@/types/runs";
 
 // File extensions accepted for each format, each also allowed with a trailing .gz
 const SEQ_EXTENSIONS: Record<SeqFormat, string[]> = {
@@ -32,6 +34,15 @@ function hasSeqExtension(path: string, extensions: string[]) {
   return extensions.some((ext) => name.endsWith(`.${ext}`));
 }
 
+// Loading message for a run in progress: records saved so far and how far through the file (by bytes) analysis is
+function progressMessage(progress: ImportProgress | null) {
+  if (!progress) return "Analysing and saving sequences...";
+  const saved = `Analysed and saved ${pluralise(progress.records, "record")}`;
+  if (progress.total_bytes === 0) return `${saved}...`;
+  const percent = Math.floor((progress.bytes_read / progress.total_bytes) * 100);
+  return `${saved} (${percent}%)...`;
+}
+
 export function FastqAnalyserApp() {
   const router = useRouter();
   const textSequences = useRef("");
@@ -39,6 +50,7 @@ export function FastqAnalyserApp() {
   const [filePath, setFilePath] = useState("");
   const [seqFormat, setSeqFormat] = useState<SeqFormat>("fastq");
   const [isRunning, setIsRunning] = useState(false);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [error, setError] = useState("");
 
   // Change the text sequences in state
@@ -109,16 +121,19 @@ export function FastqAnalyserApp() {
     clearFile();
   };
 
-  // Analyse the text or file sequences, save them as a run, then show the runs list
+  // Analyse the text or file sequences, save them as a run, then show the runs list. Files are analysed and saved
+  // in one backend call so their records never pass through the frontend, which a big file's can't.
   const analyseAndSave = async (input: "text" | "file") => {
     setError("");
+    setProgress(null);
     setIsRunning(true);
     try {
-      const records =
-        input === "text"
-          ? await analyseTextSequences(textSequences.current, seqFormat)
-          : await analyseFileSequences(fileSequences.current, seqFormat);
-      await saveRun(seqFormat, records);
+      if (input === "text") {
+        const records = await analyseTextSequences(textSequences.current, seqFormat);
+        await saveRun(seqFormat, records);
+      } else {
+        await analyseAndSaveFile(fileSequences.current, seqFormat, setProgress);
+      }
       router.push("/runs");
     } catch (e) {
       setError(`Couldn't analyse and save the sequences: ${e}`);
@@ -163,7 +178,7 @@ export function FastqAnalyserApp() {
         />
         <div className="relative mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10">
           {isRunning ? (
-            <LoadingIndicator message="Analysing and saving sequences..." />
+            <LoadingIndicator message={progressMessage(progress)} />
           ) : null}
           {error ? (
             <p role="alert" className="text-sm text-destructive">

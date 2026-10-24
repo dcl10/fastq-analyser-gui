@@ -3,17 +3,44 @@ use flate2::read::GzDecoder;
 use std::fs::File;
 use std::io::{self, BufReader, Read};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 /// Size of the buffer between the file (or gzip decoder) and the record parser.
 pub const DEFAULT_READ_CAPACITY: usize = 64 * 1024;
 
+/// Wraps a reader and adds every byte read through it to a shared counter, so another thread can see how far through
+/// a file the reader has got.
+pub struct CountingReader<R> {
+    inner: R,
+    bytes_read: Arc<AtomicU64>,
+}
+
+impl<R: Read> Read for CountingReader<R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let n = self.inner.read(buf)?;
+        self.bytes_read.fetch_add(n as u64, Ordering::Relaxed);
+        Ok(n)
+    }
+}
+
 /// Opens `path` for reading, decompressing on the fly if it ends in `.gz`.
 fn open_maybe_gz(path: &Path) -> io::Result<Box<dyn Read>> {
-    let file = File::open(path)?;
+    Ok(maybe_gz(path, File::open(path)?))
+}
+
+/// Opens `path` like `open_maybe_gz`, adding the bytes read from the file itself (compressed bytes for `.gz`) to
+/// `bytes_read`.
+fn open_maybe_gz_counted(path: &Path, bytes_read: Arc<AtomicU64>) -> io::Result<Box<dyn Read>> {
+    let file = CountingReader { inner: File::open(path)?, bytes_read };
+    Ok(maybe_gz(path, file))
+}
+
+fn maybe_gz<R: Read + 'static>(path: &Path, inner: R) -> Box<dyn Read> {
     if path.extension().is_some_and(|ext| ext == "gz") {
-        Ok(Box::new(GzDecoder::new(file)))
+        Box::new(GzDecoder::new(inner))
     } else {
-        Ok(Box::new(file))
+        Box::new(inner)
     }
 }
 
@@ -31,15 +58,38 @@ pub fn read_fastq_streaming(
     Ok(fastq::Reader::with_capacity(capacity, open_maybe_gz(path)?))
 }
 
+/// Like `read_fasta_streaming`, adding the bytes read from the file to `bytes_read` for progress reporting.
+pub fn read_fasta_streaming_counted(
+    path: &Path,
+    capacity: usize,
+    bytes_read: Arc<AtomicU64>,
+) -> io::Result<fasta::Reader<BufReader<Box<dyn Read>>>> {
+    Ok(fasta::Reader::with_capacity(capacity, open_maybe_gz_counted(path, bytes_read)?))
+}
+
+/// Like `read_fastq_streaming`, adding the bytes read from the file to `bytes_read` for progress reporting.
+pub fn read_fastq_streaming_counted(
+    path: &Path,
+    capacity: usize,
+    bytes_read: Arc<AtomicU64>,
+) -> io::Result<fastq::Reader<BufReader<Box<dyn Read>>>> {
+    Ok(fastq::Reader::with_capacity(capacity, open_maybe_gz_counted(path, bytes_read)?))
+}
+
 #[cfg(test)]
 mod tests {
     use flate2::write::GzEncoder;
     use flate2::Compression;
     use std::io::Write;
     use std::path::Path;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::Arc;
     use uuid::Uuid;
 
-    use super::{read_fasta_streaming, read_fastq_streaming, DEFAULT_READ_CAPACITY};
+    use super::{
+        read_fasta_streaming, read_fasta_streaming_counted, read_fastq_streaming, read_fastq_streaming_counted,
+        DEFAULT_READ_CAPACITY,
+    };
 
     const FASTA: &str = ">id1 description\nATAT\n>id2\nGCGC\n";
     const FASTQ: &str = "@id1 description\nATAT\n+\n!!!!\n@id2\nGCGC\n+\n!!!!\n";
@@ -120,5 +170,33 @@ mod tests {
         let missing = format!("test_io_{}.fa", Uuid::new_v4());
         assert!(read_fasta_streaming(Path::new(&missing), DEFAULT_READ_CAPACITY).is_err());
         assert!(read_fastq_streaming(Path::new(&missing), DEFAULT_READ_CAPACITY).is_err());
+    }
+
+    #[test]
+    fn test_read_streaming_counted_counts_file_bytes() {
+        let plain = format!("test_io_{}.fq", Uuid::new_v4());
+        let gz = format!("test_io_{}.fa.gz", Uuid::new_v4());
+        write_file(Path::new(&plain), FASTQ, false);
+        write_file(Path::new(&gz), FASTA, true);
+
+        let fastq_bytes = Arc::new(AtomicU64::new(0));
+        let n_fastq = read_fastq_streaming_counted(Path::new(&plain), DEFAULT_READ_CAPACITY, fastq_bytes.clone())
+            .unwrap()
+            .records()
+            .count();
+        let fasta_bytes = Arc::new(AtomicU64::new(0));
+        let n_fasta = read_fasta_streaming_counted(Path::new(&gz), DEFAULT_READ_CAPACITY, fasta_bytes.clone())
+            .unwrap()
+            .records()
+            .count();
+        let plain_len = std::fs::metadata(&plain).unwrap().len();
+        let gz_len = std::fs::metadata(&gz).unwrap().len();
+        std::fs::remove_file(&plain).unwrap();
+        std::fs::remove_file(&gz).unwrap();
+
+        assert_eq!((n_fastq, n_fasta), (2, 2));
+        assert_eq!(fastq_bytes.load(Ordering::Relaxed), plain_len);
+        // Compressed bytes, not the decompressed length
+        assert_eq!(fasta_bytes.load(Ordering::Relaxed), gz_len);
     }
 }

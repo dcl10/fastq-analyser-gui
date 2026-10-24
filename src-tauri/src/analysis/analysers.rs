@@ -15,22 +15,40 @@ pub fn analyse_fastq_reader<B: BufRead>(
     batch_size: usize,
 ) -> Result<Vec<FastqSeqResult>, String> {
     let mut results = Vec::new();
+    analyse_fastq_reader_batches(reader, batch_size, |batch| {
+        results.extend(batch);
+        Ok(())
+    })?;
+    Ok(results)
+}
+
+/// Analyses every record from `reader`, `batch_size` records at a time, handing each batch's results to `on_batch`
+/// rather than keeping them, so memory stays at about one batch however long the input is. An error from `on_batch`
+/// stops the analysis and is returned.
+pub fn analyse_fastq_reader_batches<B: BufRead, F>(
+    reader: fastq::Reader<B>,
+    batch_size: usize,
+    mut on_batch: F,
+) -> Result<(), String>
+where
+    F: FnMut(Vec<FastqSeqResult>) -> Result<(), String>,
+{
     let mut batch = Vec::with_capacity(batch_size);
     let mut offset = 0;
 
     for (i, rec) in reader.records().enumerate() {
         batch.push(rec.map_err(|e| format!("Record {}: {e}", i + 1))?);
         if batch.len() == batch_size {
-            results.extend(analyse_fastq_records(&batch, offset)?);
+            on_batch(analyse_fastq_records(&batch, offset)?)?;
             offset += batch.len();
             batch.clear();
         }
     }
     if !batch.is_empty() {
-        results.extend(analyse_fastq_records(&batch, offset)?);
+        on_batch(analyse_fastq_records(&batch, offset)?)?;
     }
 
-    Ok(results)
+    Ok(())
 }
 
 /// Analyses every record from `reader`, `batch_size` records at a time, so only one batch of parsed records is held
@@ -40,22 +58,40 @@ pub fn analyse_fasta_reader<B: BufRead>(
     batch_size: usize,
 ) -> Result<Vec<FastaSeqResult>, String> {
     let mut results = Vec::new();
+    analyse_fasta_reader_batches(reader, batch_size, |batch| {
+        results.extend(batch);
+        Ok(())
+    })?;
+    Ok(results)
+}
+
+/// Analyses every record from `reader`, `batch_size` records at a time, handing each batch's results to `on_batch`
+/// rather than keeping them, so memory stays at about one batch however long the input is. An error from `on_batch`
+/// stops the analysis and is returned.
+pub fn analyse_fasta_reader_batches<B: BufRead, F>(
+    reader: fasta::Reader<B>,
+    batch_size: usize,
+    mut on_batch: F,
+) -> Result<(), String>
+where
+    F: FnMut(Vec<FastaSeqResult>) -> Result<(), String>,
+{
     let mut batch = Vec::with_capacity(batch_size);
     let mut offset = 0;
 
     for (i, rec) in reader.records().enumerate() {
         batch.push(rec.map_err(|e| format!("Record {}: {e}", i + 1))?);
         if batch.len() == batch_size {
-            results.extend(analyse_fasta_records(&batch, offset)?);
+            on_batch(analyse_fasta_records(&batch, offset)?)?;
             offset += batch.len();
             batch.clear();
         }
     }
     if !batch.is_empty() {
-        results.extend(analyse_fasta_records(&batch, offset)?);
+        on_batch(analyse_fasta_records(&batch, offset)?)?;
     }
 
-    Ok(results)
+    Ok(())
 }
 
 /// Analyses `records`, where `offset` is the number of records before them in the input so error messages report
@@ -133,7 +169,10 @@ fn calc_phred_score(qual: &[u8]) -> u32 {
 mod tests {
     use bio::io::{fasta, fastq};
 
-    use super::{analyse_fasta_reader, analyse_fastq_reader, calc_phred_score};
+    use super::{
+        analyse_fasta_reader, analyse_fasta_reader_batches, analyse_fastq_reader, analyse_fastq_reader_batches,
+        calc_phred_score,
+    };
 
     fn fasta_input(n: usize) -> String {
         (1..=n).map(|i| format!(">id{i}\nATGC\n")).collect()
@@ -189,6 +228,53 @@ mod tests {
     fn test_analyse_reader_empty_input() {
         assert!(analyse_fasta_reader(fasta::Reader::new(&b""[..]), 3).unwrap().is_empty());
         assert!(analyse_fastq_reader(fastq::Reader::new(&b""[..]), 3).unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_analyse_fastq_reader_batches_sizes() {
+        let input = fastq_input(10);
+        let mut sizes = Vec::new();
+        analyse_fastq_reader_batches(fastq::Reader::new(input.as_bytes()), 4, |batch| {
+            sizes.push(batch.len());
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(sizes, vec![4, 4, 2]);
+    }
+
+    #[test]
+    fn test_analyse_fasta_reader_batches_sizes() {
+        let input = fasta_input(10);
+        let mut sizes = Vec::new();
+        analyse_fasta_reader_batches(fasta::Reader::new(input.as_bytes()), 5, |batch| {
+            sizes.push(batch.len());
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(sizes, vec![5, 5]);
+    }
+
+    #[test]
+    fn test_analyse_reader_batches_stops_on_callback_error() {
+        let input = fastq_input(10);
+        let mut calls = 0;
+        let err = analyse_fastq_reader_batches(fastq::Reader::new(input.as_bytes()), 3, |_| {
+            calls += 1;
+            Err("stop".to_owned())
+        })
+        .unwrap_err();
+        assert_eq!(err, "stop");
+        assert_eq!(calls, 1);
+
+        let input = fasta_input(10);
+        let mut calls = 0;
+        let err = analyse_fasta_reader_batches(fasta::Reader::new(input.as_bytes()), 3, |_| {
+            calls += 1;
+            Err("stop".to_owned())
+        })
+        .unwrap_err();
+        assert_eq!(err, "stop");
+        assert_eq!(calls, 1);
     }
 
     #[test]

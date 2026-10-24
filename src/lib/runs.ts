@@ -1,6 +1,20 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import type { SeqFormat } from "@/types/results";
-import type { ResultType, Run, RunRecords } from "@/types/runs";
+import type { ImportProgress, ResultType, Run, RunRecords } from "@/types/runs";
+
+// Analyse a sequence file and save it as a new run in one step, returning the run id. The records stay in the
+// backend, so this works for files too big to send to the frontend; onProgress is called after each saved batch.
+export async function analyseAndSaveFile(
+  path: string,
+  format: SeqFormat,
+  onProgress: (progress: ImportProgress) => void,
+): Promise<number> {
+  return invoke<number>("analyse_and_save_file", {
+    path,
+    resultType: format === "fastq" ? "Fastq" : "Fasta",
+    onProgress: new Channel<ImportProgress>(onProgress),
+  });
+}
 
 // Save analysed records as a new run and return the id the database assigned it
 export async function saveRun(format: SeqFormat, records: RunRecords): Promise<number> {

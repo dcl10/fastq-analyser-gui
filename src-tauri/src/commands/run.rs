@@ -1,10 +1,32 @@
+use std::path::PathBuf;
+
+use tauri::ipc::Channel;
 use tauri::State;
 
 use crate::{
-    models::Run as RunModel,
-    services::run::{create_run, get_run_with_records},
+    analysis::analysers::BATCH_SIZE,
+    data::entities::ResultType,
+    models::{ImportProgress, Run as RunModel},
+    services::run::{create_run, create_run_from_file, get_run_with_records},
     AppState,
 };
+
+/// Analyses a file and saves it as a new run in one step, returning the run id. The results never cross to the
+/// frontend, which instead gets an `ImportProgress` on `on_progress` after each batch is saved.
+#[tauri::command]
+pub async fn analyse_and_save_file(
+    state: State<'_, AppState>,
+    path: PathBuf,
+    result_type: ResultType,
+    on_progress: Channel<ImportProgress>,
+) -> Result<u32, String> {
+    create_run_from_file(state.db.clone(), path, result_type, BATCH_SIZE, |progress| {
+        if let Err(e) = on_progress.send(progress) {
+            log::warn!("Couldn't send import progress: {e}");
+        }
+    })
+    .await
+}
 
 #[tauri::command]
 pub async fn save_run(state: State<'_, AppState>, run: RunModel) -> Result<u32, String> {

@@ -70,6 +70,7 @@ pub fn run() {
             commands::analysis::analyse_fasta_sequences,
             commands::analysis::analyse_fasta_file,
             commands::record::count_record_pages,
+            commands::run::analyse_and_save_file,
             commands::record::list_records_for_run,
             commands::run::count_run_pages,
             commands::run::delete_run,

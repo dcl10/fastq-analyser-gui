@@ -1,37 +1,32 @@
 use bio::io::{fasta, fastq};
 use flate2::read::GzDecoder;
 use std::fs::File;
-use std::io::{BufReader, Read, Write};
+use std::io::{self, BufReader, Read};
 use std::path::Path;
 
-pub fn read_fasta(path: &Path) -> fasta::Reader<BufReader<File>> {
-    let path_str = path.as_os_str().to_str().unwrap();
-    if path_str.ends_with(".gz") {
-        let extracted_gz_path = extract_gzip(path);
-        fasta::Reader::from_file(extracted_gz_path).unwrap()
+/// Size of the buffer between the file (or gzip decoder) and the record parser.
+pub const DEFAULT_READ_CAPACITY: usize = 64 * 1024;
+
+/// Opens `path` for reading, decompressing on the fly if it ends in `.gz`.
+fn open_maybe_gz(path: &Path) -> io::Result<Box<dyn Read>> {
+    let file = File::open(path)?;
+    if path.extension().is_some_and(|ext| ext == "gz") {
+        Ok(Box::new(GzDecoder::new(file)))
     } else {
-        fasta::Reader::from_file(path).unwrap()
+        Ok(Box::new(file))
     }
 }
 
-pub fn read_fastq(path: &Path) -> fastq::Reader<BufReader<File>> {
-    let path_str = path.as_os_str().to_str().unwrap();
-    if path_str.ends_with(".gz") {
-        let extracted_gz_path = extract_gzip(path);
-        fastq::Reader::from_file(extracted_gz_path).unwrap()
-    } else {
-        fastq::Reader::from_file(path).unwrap()
-    }
+pub fn read_fasta_streaming(
+    path: &Path,
+    capacity: usize,
+) -> io::Result<fasta::Reader<BufReader<Box<dyn Read>>>> {
+    Ok(fasta::Reader::with_capacity(capacity, open_maybe_gz(path)?))
 }
 
-fn extract_gzip(path: &Path) -> String {
-    let gzip_file = File::open(path).unwrap();
-    let mut decoder = GzDecoder::new(gzip_file);
-    let mut buf_string = String::new();
-    let out_file_path = path.as_os_str().to_str().unwrap().replace(".gz", "");
-    let extracted_file = File::create(&out_file_path).unwrap();
-    decoder.read_to_string(&mut buf_string).unwrap();
-    let mut file_buffer = std::io::BufWriter::new(extracted_file);
-    file_buffer.write_all(buf_string.as_bytes()).unwrap();
-    out_file_path
+pub fn read_fastq_streaming(
+    path: &Path,
+    capacity: usize,
+) -> io::Result<fastq::Reader<BufReader<Box<dyn Read>>>> {
+    Ok(fastq::Reader::with_capacity(capacity, open_maybe_gz(path)?))
 }

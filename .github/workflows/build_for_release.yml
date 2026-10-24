@@ -38,6 +38,11 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: enable Corepack
+        # Bare `corepack enable` only shims Yarn/pnpm by default — npm needs
+        # to be named explicitly to have Corepack override Node's bundled npm.
+        run: corepack enable npm
+
       - name: install system dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-latest'
         run: |
@@ -51,16 +56,17 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS code signing + notarization — inert until these secrets exist
-          # (the build is just unsigned in the meantime). See:
+          # Releases are unsigned for now. macOS builds are ad-hoc signed
+          # (`bundle.macOS.signingIdentity: "-"` in tauri.conf.json) so a
+          # downloaded app can be opened via Privacy & Security -> Open Anyway
+          # instead of being reported as damaged. To sign and notarize, add an
+          # Apple Developer certificate as repo secrets and pass APPLE_CERTIFICATE,
+          # APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_ID,
+          # APPLE_PASSWORD and APPLE_TEAM_ID here. They're left out until then:
+          # a missing secret still sets the variable (to ""), which would
+          # override the ad-hoc identity. See:
           # https://v2.tauri.app/distribute/sign/macos/
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Windows code signing isn't wired up here yet: unlike macOS, Tauri
+          # Windows code signing isn't wired up either: unlike macOS, Tauri
           # doesn't take a certificate via env vars — it needs a cert already
           # in the Windows certificate store (imported in an earlier step from
           # a secret) plus a matching `bundle.windows.certificateThumbprint`

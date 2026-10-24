@@ -1,4 +1,4 @@
-// Mirrors the Rust Run / RunRecords types in src-tauri/src/models.rs, as serde serializes them
+// Mirrors the Rust Run / RunRecords / ImportProgress types in src-tauri/src/models.rs, as serde serializes them
 
 import type { FastaSeqResult, FastqSeqResult } from "@/types/results";
 
@@ -12,4 +12,14 @@ export interface Run {
   created_at: string;
   result_type: ResultType;
   records: RunRecords;
+}
+
+/** Sent after each batch while a file is analysed and saved. */
+export interface ImportProgress {
+  /** Records analysed and saved so far. */
+  records: number;
+  /** Bytes read from the file so far (compressed bytes for .gz); runs slightly ahead of records. */
+  bytes_read: number;
+  /** Size of the file in bytes. */
+  total_bytes: number;
 }

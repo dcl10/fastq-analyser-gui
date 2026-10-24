@@ -51,6 +51,8 @@ src/
 ├── components/
 │   ├── app-shell.tsx, rail-nav.tsx, title-bar.tsx, toolbar.tsx, theme-switch.tsx,
 │   │   theme-provider.tsx        # windowed shell chrome (see PR #38); rail items route to /<id>
+│   ├── settings-dialog.tsx      # 'use client' — title-bar gear + Dialog for the analysis thread count;
+│   │                            #   saving restarts the app
 │   ├── brand/                    # dna-motif.tsx, wordmark.tsx — brand components
 │   ├── fastq-analyser-app.tsx  # 'use client' — text/file input; Submit analyses, saves the run, routes to /runs
 │   ├── runs-list.tsx            # 'use client' — paged table of saved runs from list_runs; rows open the
@@ -64,33 +66,41 @@ src/
 │   ├── analysis.ts             # invoke() wrappers for the analyse_* commands, returning RunRecords
 │   ├── runs.ts                 # invoke() wrappers for the run commands and list_records_for_run, plus
 │   │                           #   count_run_pages / count_record_pages
+│   ├── settings.ts             # invoke() wrappers for get_thread_settings / save_thread_settings
 │   └── utils.ts                  # shadcn's `cn()` class-merging helper; `pluralise()` for count labels
 └── types/
     ├── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs
-    └── runs.ts                  # Run / RunRecords TS types matching models.rs's serde JSON shape
+    ├── runs.ts                  # Run / RunRecords TS types matching models.rs's serde JSON shape
+    └── settings.ts              # ThreadSettings TS type matching models.rs
 
 src-tauri/src/
-├── main.rs / lib.rs           # registers the #[tauri::command] handlers below, plugins (dialog, log), AppState (db
-│                              #   pool, pagination options)
-├── models.rs                  # FastqSeqResult / FastaSeqResult / Run / RunRecords (serde structs)
+├── main.rs / lib.rs           # registers the #[tauri::command] handlers below, plugins (dialog, log, os, store),
+│                              #   AppState (db pool, pagination options); configure_thread_pool builds rayon's
+│                              #   global pool in setup()
+├── models.rs                  # FastqSeqResult / FastaSeqResult / Run / RunRecords / ThreadSettings (serde structs)
 ├── analysis/
 │   └── analysers.rs           # analyse_*_reader (batches of BATCH_SIZE) / analyse_*_records — GC%, ORF count,
 │                              #   Phred score
 ├── commands/
 │   ├── analysis.rs            # tauri commands: *_sequences (raw text) and *_file (path) for both formats
 │   ├── record.rs              # tauri commands: list_records_for_run / count_record_pages
-│   └── run.rs                 # tauri commands: save_run / load_run / list_runs / count_run_pages / delete_run
+│   ├── run.rs                 # tauri commands: save_run / load_run / list_runs / count_run_pages / delete_run
+│   └── settings.rs            # tauri commands: get_thread_settings / save_thread_settings (persist, then restart)
 ├── data/
 │   ├── db.rs                  # init_db — SQLite pool (WAL, foreign keys on) + runs migrations
 │   └── entities.rs            # Run / Record / ResultType row types (sqlx::FromRow)
 ├── options/
-│   └── pagination.rs          # Pagination { page_size } (default 100) — limit_offset(page), total_pages(total)
+│   ├── pagination.rs          # Pagination { page_size } (default 100) — limit_offset(page), total_pages(total)
+│   └── threads.rs             # ThreadOptions { thread_count } (None = Auto) — validate() in 1..=max_threads()
 └── services/
     ├── io.rs                  # streaming file readers (gzip decompressed on the fly)
     ├── run.rs                 # create_run / list_runs / count_runs / get_run_with_records / delete_run
-    └── record.rs              # batch record inserts (per format) / list_records_for_run / count_records_for_run
+    ├── record.rs              # batch record inserts (per format) / list_records_for_run / count_records_for_run
+    └── settings.rs            # load/save_thread_options via tauri-plugin-store (settings.json in app data)
 
 src-tauri/migrations/          # sqlx migrations (runs, records with ON DELETE CASCADE)
+src-tauri/tests/thread_pool.rs # integration test: global pool starts with the persisted thread count (own
+                               #   process, since build_global can only run once)
 ```
 
 Tauri bundles a static frontend — no Node server ships in the app. `next.config.ts` sets `output: "export"` so
@@ -116,12 +126,17 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
 - `Pagination` (`options/pagination.rs`) — held on `AppState` as `pagination_options`. Pages are zero-based:
   `list_runs` / `list_records_for_run` take a `page` and `load_run` returns page 0 of the run's records. The
   `count_*_pages` commands return page counts (not row counts), so the page size lives only on the Rust side.
+- Settings commands (`commands/settings.rs`): `get_thread_settings` returns `ThreadSettings` (`thread_count`, `null`
+  for Auto, plus `max_threads`); `save_thread_settings` validates, persists, then calls `AppHandle::request_restart()`
+  — rayon's global pool can only be built once per process, so a new thread count only applies after a restart.
+- `lib.rs`'s `run()` has a single `.setup()` closure — each `Builder::setup` call replaces the previous one.
 
 ## Current Capabilities
 
 - Both FASTA and FASTQ are supported end-to-end, from pasted text or a file, with transparent gzip decompression.
 - Record analysis is batched and parallel within each batch — `analyse_fastq_records`/`analyse_fasta_records` use
-  rayon's `par_iter` on the global thread pool (a configurable thread count is tracked in an open issue).
+  rayon's `par_iter` on the global thread pool, sized at startup from the thread count set in the settings dialog
+  (default Auto = `available_parallelism()`).
 - Runs persist to SQLite via `services::run`. `create_run` inserts the run and its records in a single transaction;
   `delete_run` relies on `ON DELETE CASCADE` to remove records.
 - The runs list and run detail page are paginated (100 rows per page).
@@ -180,7 +195,9 @@ Backend:
 - `serde` / `serde_json` — result (de)serialization
 - `sqlx` (SQLite, tokio runtime, migrations) / `chrono` — local run storage and timestamps
 - `uuid` — used in test fixtures
-- `tauri` — desktop app shell and command bridge
+- `tauri` — desktop app shell and command bridge (`test` feature in dev-dependencies for `mock_app` tests)
+- `tauri-plugin-store` — persisted settings (`settings.json`), used from Rust only
+- `rayon` — parallel record analysis
 
 Frontend:
 

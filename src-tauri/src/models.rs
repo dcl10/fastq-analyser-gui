@@ -120,3 +120,12 @@ pub enum RunRecords {
     FastaRecords(Vec<FastaSeqResult>),
     FastqRecords(Vec<FastqSeqResult>),
 }
+
+/// The thread-count setting as the settings dialog shows it
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq)]
+pub struct ThreadSettings {
+    /// Persisted thread count; `None` is "Auto"
+    pub thread_count: Option<u32>,
+    /// Upper bound for `thread_count` (the core count)
+    pub max_threads: u32,
+}

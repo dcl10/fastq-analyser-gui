@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ChartColumnIcon, DnaIcon, DownloadIcon, FileUpIcon, HistoryIcon } from "lucide-react";
 import { RailNav, type RailNavItem } from "@/components/rail-nav";
 import { TitleBar } from "@/components/title-bar";
+import { SettingsDialog } from "@/components/settings-dialog";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { Wordmark } from "@/components/brand/wordmark";
 import pkg from "../../package.json";
@@ -30,7 +31,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <TitleBar title="FastQ Analyser" actions={<ThemeSwitch />} />
+      <TitleBar
+        title="FastQ Analyser"
+        actions={
+          <>
+            <SettingsDialog />
+            <ThemeSwitch />
+          </>
+        }
+      />
       <div className="flex min-h-0 flex-1">
         <RailNav
           value={current}

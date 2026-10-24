@@ -202,3 +202,189 @@ pub async fn delete_run(pool: SqlitePool, run_id: u32) -> Result<(), sqlx::Error
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::cell::RefCell;
+    use std::io::Write;
+    use std::path::{Path, PathBuf};
+    use std::str::FromStr;
+
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool, SqlitePoolOptions};
+    use tauri::async_runtime::block_on;
+    use uuid::Uuid;
+
+    use super::{count_runs, create_run_from_file, list_runs};
+    use crate::data::entities::ResultType;
+    use crate::models::{FastqSeqResult, ImportProgress};
+    use crate::services::record::{count_records_for_run, list_records_for_run};
+
+    async fn test_pool() -> SqlitePool {
+        let options = SqliteConnectOptions::from_str("sqlite::memory:").unwrap().foreign_keys(true);
+        // One connection, since each in-memory connection is a separate database
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await
+            .unwrap();
+        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+        pool
+    }
+
+    fn fastq_input(n: usize) -> String {
+        (1..=n).map(|i| format!("@id{i}\nATGC\n+\n!!!!\n")).collect()
+    }
+
+    fn fasta_input(n: usize) -> String {
+        (1..=n).map(|i| format!(">id{i}\nATGC\n")).collect()
+    }
+
+    fn write_file(extension: &str, contents: &str) -> PathBuf {
+        let path = PathBuf::from(format!("test_run_{}.{extension}", Uuid::new_v4()));
+        let file = std::fs::File::create(&path).unwrap();
+        if extension.ends_with(".gz") {
+            let mut encoder = GzEncoder::new(file, Compression::default());
+            encoder.write_all(contents.as_bytes()).unwrap();
+            encoder.finish().unwrap();
+        } else {
+            let mut file = file;
+            file.write_all(contents.as_bytes()).unwrap();
+        }
+        path
+    }
+
+    fn remove_file(path: &Path) {
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn test_create_run_from_file_saves_every_batch() {
+        block_on(async {
+            let pool = test_pool().await;
+            let path = write_file("fq", &fastq_input(25));
+            let file_len = std::fs::metadata(&path).unwrap().len();
+            let progress = RefCell::new(Vec::<ImportProgress>::new());
+
+            let run_id = create_run_from_file(pool.clone(), path.clone(), ResultType::Fastq, 10, |p| {
+                progress.borrow_mut().push(p)
+            })
+            .await;
+            remove_file(&path);
+            let run_id = run_id.unwrap();
+
+            assert_eq!(count_records_for_run(pool.clone(), run_id).await.unwrap(), 25);
+            let records: Vec<FastqSeqResult> = list_records_for_run(pool.clone(), run_id, 100, 0).await.unwrap();
+            let ids: Vec<String> = records.into_iter().map(|r| r.id).collect();
+            let expected: Vec<String> = (1..=25).map(|i| format!("id{i}")).collect();
+            assert_eq!(ids, expected);
+
+            let progress = progress.into_inner();
+            let counts: Vec<u64> = progress.iter().map(|p| p.records).collect();
+            assert_eq!(counts, vec![10, 20, 25]);
+            let last = progress.last().unwrap();
+            assert_eq!((last.bytes_read, last.total_bytes), (file_len, file_len));
+        });
+    }
+
+    #[test]
+    fn test_create_run_from_file_gzipped_fasta() {
+        block_on(async {
+            let pool = test_pool().await;
+            let path = write_file("fa.gz", &fasta_input(5));
+
+            let run_id = create_run_from_file(pool.clone(), path.clone(), ResultType::Fasta, 10, |_| {}).await;
+            remove_file(&path);
+            let run_id = run_id.unwrap();
+
+            assert_eq!(count_records_for_run(pool.clone(), run_id).await.unwrap(), 5);
+            let runs = list_runs(pool.clone(), 10, 0).await.unwrap();
+            assert_eq!(runs.len(), 1);
+            assert_eq!(runs[0].result_type, ResultType::Fasta);
+        });
+    }
+
+    #[test]
+    fn test_create_run_from_file_error_saves_nothing() {
+        block_on(async {
+            let pool = test_pool().await;
+            // Record 15's quality is shorter than its sequence, so it fails in the second batch of 10, after the
+            // first batch has been inserted
+            let mut input = fastq_input(14);
+            input.push_str("@bad\nATGC\n+\n!!\n");
+            input.push_str(&fastq_input(5));
+            let path = write_file("fq", &input);
+
+            let result = create_run_from_file(pool.clone(), path.clone(), ResultType::Fastq, 10, |_| {}).await;
+            remove_file(&path);
+
+            let err = result.unwrap_err();
+            assert!(err.starts_with("Record 15 (bad)"), "unexpected error: {err}");
+            assert_eq!(count_runs(pool.clone()).await.unwrap(), 0);
+            let records: u32 = sqlx::query_scalar("SELECT COUNT(*) FROM records").fetch_one(&pool).await.unwrap();
+            assert_eq!(records, 0);
+        });
+    }
+
+    #[test]
+    fn test_create_run_from_file_wrong_format_saves_nothing() {
+        block_on(async {
+            let pool = test_pool().await;
+            let path = write_file("fq", &fasta_input(3));
+
+            let result = create_run_from_file(pool.clone(), path.clone(), ResultType::Fastq, 10, |_| {}).await;
+            remove_file(&path);
+
+            let err = result.unwrap_err();
+            assert!(err.contains("expected '@'"), "unexpected error: {err}");
+            assert_eq!(count_runs(pool.clone()).await.unwrap(), 0);
+        });
+    }
+
+    #[test]
+    fn test_create_run_from_file_missing() {
+        block_on(async {
+            let pool = test_pool().await;
+            let path = PathBuf::from(format!("test_run_{}.fq", Uuid::new_v4()));
+
+            let result = create_run_from_file(pool.clone(), path, ResultType::Fastq, 10, |_| {}).await;
+
+            assert!(result.is_err());
+            assert_eq!(count_runs(pool.clone()).await.unwrap(), 0);
+        });
+    }
+
+    // Peak-memory and timing benchmark for analysing and saving a large FASTQ file into an on-disk WAL database, as
+    // the app does. Run with:
+    // BENCH_FILE=<path> cargo test --release services::run::tests::bench_create_run_from_file -- --ignored --exact
+    #[test]
+    #[ignore]
+    fn bench_create_run_from_file() {
+        let path = std::env::var("BENCH_FILE").expect("set BENCH_FILE to a FASTQ file");
+        let db_path = std::env::temp_dir().join(format!("bench_run_{}.sqlite", Uuid::new_v4()));
+        let result = block_on(async {
+            let options = SqliteConnectOptions::from_str(&format!("sqlite://{}", db_path.display()))
+                .unwrap()
+                .create_if_missing(true)
+                .foreign_keys(true)
+                .journal_mode(SqliteJournalMode::Wal);
+            let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+            sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+
+            let start = std::time::Instant::now();
+            let last = RefCell::new(None);
+            let run_id = create_run_from_file(pool.clone(), PathBuf::from(&path), ResultType::Fastq, crate::analysis::analysers::BATCH_SIZE, |p| {
+                *last.borrow_mut() = Some(p)
+            })
+            .await
+            .unwrap();
+            println!("saved run {run_id} in {:.1?}: {:?}", start.elapsed(), last.into_inner());
+            pool.close().await;
+        });
+        for suffix in ["", "-wal", "-shm"] {
+            let _ = std::fs::remove_file(format!("{}{suffix}", db_path.display()));
+        }
+        result
+    }
+}

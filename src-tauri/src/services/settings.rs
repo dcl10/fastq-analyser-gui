@@ -54,3 +54,59 @@ pub fn save_thread_options<R: Runtime>(
     store.set(THREAD_COUNT_KEY, serde_json::json!(options.thread_count));
     store.save()
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use tauri::test::{mock_builder, mock_context, noop_assets, MockRuntime};
+    use uuid::Uuid;
+
+    use super::*;
+
+    fn mock_app() -> tauri::App<MockRuntime> {
+        mock_builder()
+            .plugin(tauri_plugin_store::Builder::default().build())
+            .build(mock_context(noop_assets()))
+            .expect("Failed to build mock app")
+    }
+
+    // An absolute path, so the store doesn't land in the (unset) mock app data directory
+    fn temp_store_path() -> PathBuf {
+        std::env::temp_dir().join(format!("fastq-analyser-test-{}.json", Uuid::new_v4()))
+    }
+
+    #[test]
+    fn test_load_thread_options_defaults_when_unset() {
+        let app = mock_app();
+        let options = load_thread_options(app.handle(), temp_store_path()).unwrap();
+        assert_eq!(options, ThreadOptions::default());
+    }
+
+    #[test]
+    fn test_save_then_load_thread_options() {
+        let app = mock_app();
+        let path = temp_store_path();
+        let saved = ThreadOptions { thread_count: Some(1) };
+
+        save_thread_options(app.handle(), &path, saved).unwrap();
+        assert!(path.exists());
+        assert_eq!(load_thread_options(app.handle(), &path).unwrap(), saved);
+
+        save_thread_options(app.handle(), &path, ThreadOptions::default()).unwrap();
+        assert_eq!(load_thread_options(app.handle(), &path).unwrap(), ThreadOptions::default());
+
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn test_load_thread_options_ignores_invalid_value() {
+        let path = temp_store_path();
+        std::fs::write(&path, r#"{"thread_count": 0}"#).unwrap();
+
+        let app = mock_app();
+        assert_eq!(load_thread_options(app.handle(), &path).unwrap(), ThreadOptions::default());
+
+        std::fs::remove_file(path).unwrap();
+    }
+}

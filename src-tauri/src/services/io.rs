@@ -82,9 +82,14 @@ mod tests {
     use flate2::Compression;
     use std::io::Write;
     use std::path::Path;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::Arc;
     use uuid::Uuid;
 
-    use super::{read_fasta_streaming, read_fastq_streaming, DEFAULT_READ_CAPACITY};
+    use super::{
+        read_fasta_streaming, read_fasta_streaming_counted, read_fastq_streaming, read_fastq_streaming_counted,
+        DEFAULT_READ_CAPACITY,
+    };
 
     const FASTA: &str = ">id1 description\nATAT\n>id2\nGCGC\n";
     const FASTQ: &str = "@id1 description\nATAT\n+\n!!!!\n@id2\nGCGC\n+\n!!!!\n";
@@ -165,5 +170,33 @@ mod tests {
         let missing = format!("test_io_{}.fa", Uuid::new_v4());
         assert!(read_fasta_streaming(Path::new(&missing), DEFAULT_READ_CAPACITY).is_err());
         assert!(read_fastq_streaming(Path::new(&missing), DEFAULT_READ_CAPACITY).is_err());
+    }
+
+    #[test]
+    fn test_read_streaming_counted_counts_file_bytes() {
+        let plain = format!("test_io_{}.fq", Uuid::new_v4());
+        let gz = format!("test_io_{}.fa.gz", Uuid::new_v4());
+        write_file(Path::new(&plain), FASTQ, false);
+        write_file(Path::new(&gz), FASTA, true);
+
+        let fastq_bytes = Arc::new(AtomicU64::new(0));
+        let n_fastq = read_fastq_streaming_counted(Path::new(&plain), DEFAULT_READ_CAPACITY, fastq_bytes.clone())
+            .unwrap()
+            .records()
+            .count();
+        let fasta_bytes = Arc::new(AtomicU64::new(0));
+        let n_fasta = read_fasta_streaming_counted(Path::new(&gz), DEFAULT_READ_CAPACITY, fasta_bytes.clone())
+            .unwrap()
+            .records()
+            .count();
+        let plain_len = std::fs::metadata(&plain).unwrap().len();
+        let gz_len = std::fs::metadata(&gz).unwrap().len();
+        std::fs::remove_file(&plain).unwrap();
+        std::fs::remove_file(&gz).unwrap();
+
+        assert_eq!((n_fastq, n_fasta), (2, 2));
+        assert_eq!(fastq_bytes.load(Ordering::Relaxed), plain_len);
+        // Compressed bytes, not the decompressed length
+        assert_eq!(fasta_bytes.load(Ordering::Relaxed), gz_len);
     }
 }

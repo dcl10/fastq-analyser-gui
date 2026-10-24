@@ -30,10 +30,12 @@ cargo build
 cargo test
 ```
 
-CI: `.github/workflows/build_for_release.yml` predates the Tauri v2 migration and needs reworking into a manual
-(`workflow_dispatch`) release workflow before it's usable again (tracked in an open issue). A `build_and_test`
-workflow running backend `cargo build`/`cargo test` on PRs into `main` is tracked separately; add a frontend
-`next build`/`npm run lint` step to it once this frontend exists.
+CI: `.github/workflows/build_and_test.yml` runs `npm run lint`, `npm run build`, `cargo build` and `cargo test` on
+PRs into, and pushes to, `main`. `.github/workflows/build_for_release.yml` (`publish`) runs when a GitHub release is
+published: `tauri-action` builds macOS (universal), Linux and Windows bundles and attaches them to that release.
+Builds are unsigned; macOS ones are ad-hoc signed (`bundle.macOS.signingIdentity: "-"`) so they open via Open Anyway.
+To release, bump the version in `package.json`/`package-lock.json`, `tauri.conf.json` and `Cargo.toml`/`Cargo.lock`,
+merge, then publish a release tagged `v<version>` (a `-rc.N` pre-release first to check all three builds).
 
 ## Architecture
 

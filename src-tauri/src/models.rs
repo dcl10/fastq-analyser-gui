@@ -121,6 +121,26 @@ pub enum RunRecords {
     FastqRecords(Vec<FastqSeqResult>),
 }
 
+impl RunRecords {
+    pub fn len(&self) -> usize {
+        match self {
+            RunRecords::FastaRecords(records) => records.len(),
+            RunRecords::FastqRecords(records) => records.len(),
+        }
+    }
+}
+
+/// How far an analyse-and-save of a file has got, sent to the frontend after each batch is saved
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq)]
+pub struct ImportProgress {
+    /// Records analysed and saved so far
+    pub records: u64,
+    /// Bytes read from the file so far (compressed bytes for `.gz`), which runs slightly ahead of `records`
+    pub bytes_read: u64,
+    /// Size of the file in bytes
+    pub total_bytes: u64,
+}
+
 /// The thread-count setting as the settings dialog shows it
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq)]
 pub struct ThreadSettings {

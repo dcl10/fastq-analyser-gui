@@ -169,7 +169,10 @@ fn calc_phred_score(qual: &[u8]) -> u32 {
 mod tests {
     use bio::io::{fasta, fastq};
 
-    use super::{analyse_fasta_reader, analyse_fastq_reader, calc_phred_score};
+    use super::{
+        analyse_fasta_reader, analyse_fasta_reader_batches, analyse_fastq_reader, analyse_fastq_reader_batches,
+        calc_phred_score,
+    };
 
     fn fasta_input(n: usize) -> String {
         (1..=n).map(|i| format!(">id{i}\nATGC\n")).collect()
@@ -225,6 +228,53 @@ mod tests {
     fn test_analyse_reader_empty_input() {
         assert!(analyse_fasta_reader(fasta::Reader::new(&b""[..]), 3).unwrap().is_empty());
         assert!(analyse_fastq_reader(fastq::Reader::new(&b""[..]), 3).unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_analyse_fastq_reader_batches_sizes() {
+        let input = fastq_input(10);
+        let mut sizes = Vec::new();
+        analyse_fastq_reader_batches(fastq::Reader::new(input.as_bytes()), 4, |batch| {
+            sizes.push(batch.len());
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(sizes, vec![4, 4, 2]);
+    }
+
+    #[test]
+    fn test_analyse_fasta_reader_batches_sizes() {
+        let input = fasta_input(10);
+        let mut sizes = Vec::new();
+        analyse_fasta_reader_batches(fasta::Reader::new(input.as_bytes()), 5, |batch| {
+            sizes.push(batch.len());
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(sizes, vec![5, 5]);
+    }
+
+    #[test]
+    fn test_analyse_reader_batches_stops_on_callback_error() {
+        let input = fastq_input(10);
+        let mut calls = 0;
+        let err = analyse_fastq_reader_batches(fastq::Reader::new(input.as_bytes()), 3, |_| {
+            calls += 1;
+            Err("stop".to_owned())
+        })
+        .unwrap_err();
+        assert_eq!(err, "stop");
+        assert_eq!(calls, 1);
+
+        let input = fasta_input(10);
+        let mut calls = 0;
+        let err = analyse_fasta_reader_batches(fasta::Reader::new(input.as_bytes()), 3, |_| {
+            calls += 1;
+            Err("stop".to_owned())
+        })
+        .unwrap_err();
+        assert_eq!(err, "stop");
+        assert_eq!(calls, 1);
     }
 
     #[test]

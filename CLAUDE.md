@@ -54,7 +54,8 @@ src/
 │   ├── settings-dialog.tsx      # 'use client' — title-bar gear + Dialog for the analysis thread count;
 │   │                            #   saving restarts the app
 │   ├── brand/                    # dna-motif.tsx, wordmark.tsx — brand components
-│   ├── fastq-analyser-app.tsx  # 'use client' — text/file input; Submit analyses, saves the run, routes to /runs
+│   ├── fastq-analyser-app.tsx  # 'use client' — text/file input; Submit analyses, saves the run (files in one
+│   │                            #   analyse_and_save_file call, showing its progress), routes to /runs
 │   ├── runs-list.tsx            # 'use client' — paged table of saved runs from list_runs; rows open the
 │   │                            #   detail page, bin button confirms then deletes
 │   ├── run-detail.tsx           # 'use client' — one run's records as a paged table: page 0 from load_run,
@@ -65,26 +66,28 @@ src/
 ├── lib/
 │   ├── analysis.ts             # invoke() wrappers for the analyse_* commands, returning RunRecords
 │   ├── runs.ts                 # invoke() wrappers for the run commands and list_records_for_run, plus
-│   │                           #   count_run_pages / count_record_pages
+│   │                           #   count_run_pages / count_record_pages; analyseAndSaveFile passes a progress Channel
 │   ├── settings.ts             # invoke() wrappers for get_thread_settings / save_thread_settings
 │   └── utils.ts                  # shadcn's `cn()` class-merging helper; `pluralise()` for count labels
 └── types/
     ├── results.ts               # FastaSeqResult / FastqSeqResult TS interfaces mirroring models.rs
-    ├── runs.ts                  # Run / RunRecords TS types matching models.rs's serde JSON shape
+    ├── runs.ts                  # Run / RunRecords / ImportProgress TS types matching models.rs's serde JSON shape
     └── settings.ts              # ThreadSettings TS type matching models.rs
 
 src-tauri/src/
 ├── main.rs / lib.rs           # registers the #[tauri::command] handlers below, plugins (dialog, log, os, store),
 │                              #   AppState (db pool, pagination options); configure_thread_pool builds rayon's
 │                              #   global pool in setup()
-├── models.rs                  # FastqSeqResult / FastaSeqResult / Run / RunRecords / ThreadSettings (serde structs)
+├── models.rs                  # FastqSeqResult / FastaSeqResult / Run / RunRecords / ImportProgress /
+│                              #   ThreadSettings (serde structs)
 ├── analysis/
-│   └── analysers.rs           # analyse_*_reader (batches of BATCH_SIZE) / analyse_*_records — GC%, ORF count,
-│                              #   Phred score
+│   └── analysers.rs           # analyse_*_reader_batches (batches of BATCH_SIZE to a callback) / analyse_*_reader
+│                              #   (collects them) / analyse_*_records — GC%, ORF count, Phred score
 ├── commands/
 │   ├── analysis.rs            # tauri commands: *_sequences (raw text) and *_file (path) for both formats
 │   ├── record.rs              # tauri commands: list_records_for_run / count_record_pages
-│   ├── run.rs                 # tauri commands: save_run / load_run / list_runs / count_run_pages / delete_run
+│   ├── run.rs                 # tauri commands: analyse_and_save_file / save_run / load_run / list_runs /
+│                              #   count_run_pages / delete_run
 │   └── settings.rs            # tauri commands: get_thread_settings / save_thread_settings (persist, then restart)
 ├── data/
 │   ├── db.rs                  # init_db — SQLite pool (WAL, foreign keys on) + runs migrations
@@ -93,9 +96,12 @@ src-tauri/src/
 │   ├── pagination.rs          # Pagination { page_size } (default 100) — limit_offset(page), total_pages(total)
 │   └── threads.rs             # ThreadOptions { thread_count } (None = Auto) — validate() in 1..=max_threads()
 └── services/
-    ├── io.rs                  # streaming file readers (gzip decompressed on the fly)
-    ├── run.rs                 # create_run / list_runs / count_runs / get_run_with_records / delete_run
-    ├── record.rs              # batch record inserts (per format) / list_records_for_run / count_records_for_run
+    ├── io.rs                  # streaming file readers (gzip decompressed on the fly); *_counted variants count
+    │                          #   the file bytes read, for progress
+    ├── run.rs                 # create_run / create_run_from_file / list_runs / count_runs / get_run_with_records /
+    │                          #   delete_run
+    ├── record.rs              # batch record inserts (create_records, or per format) / list_records_for_run /
+    │                          #   count_records_for_run
     └── settings.rs            # load/save_thread_options via tauri-plugin-store (settings.json in app data)
 
 src-tauri/migrations/          # sqlx migrations (runs, records with ON DELETE CASCADE)
@@ -120,7 +126,13 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
   `analyse_fasta_sequences`, `analyse_fasta_file`. The `_file` variants stream the file, decompressing `.gz` inputs on
   the fly (nothing is extracted to disk). All four parse and analyse records in batches of `BATCH_SIZE`
   (`analysers.rs`) rather than loading every record first, though the returned `Vec` still holds every result. They're `#[tauri::command(async)]` so analysis runs off the main thread and doesn't
-  freeze the window.
+  freeze the window. The frontend only uses the `_sequences` variants; files go through `analyse_and_save_file`.
+- `analyse_and_save_file` (`commands/run.rs`) — takes a `path`, `result_type` and an `on_progress`
+  `Channel<ImportProgress>`, returns the new run id. `services::run::create_run_from_file` analyses on a
+  `spawn_blocking` thread and sends each batch through a small bounded `tokio::sync::mpsc` queue to the async side,
+  which inserts it into the run inside one transaction (a failure part-way saves nothing) and sends progress
+  (`records`, `bytes_read`, `total_bytes`). Results never cross IPC, so memory stays at about one batch: sending a
+  10^8-record result set to the webview and back to `save_run` ran out of memory.
 - Run commands (`commands/run.rs`): `save_run` (returns the new run id), `load_run`, `list_runs`, `count_run_pages`,
   `delete_run`. Record commands (`commands/record.rs`): `list_records_for_run`, `count_record_pages`.
 - `Pagination` (`options/pagination.rs`) — held on `AppState` as `pagination_options`. Pages are zero-based:
@@ -137,6 +149,8 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
 - Record analysis is batched and parallel within each batch — `analyse_fastq_records`/`analyse_fasta_records` use
   rayon's `par_iter` on the global thread pool, sized at startup from the thread count set in the settings dialog
   (default Auto = `available_parallelism()`).
+- Files are analysed and saved in one streamed backend call, with progress shown on the Import page; pasted text is
+  analysed, returned to the frontend and saved with `save_run`.
 - Runs persist to SQLite via `services::run`. `create_run` inserts the run and its records in a single transaction;
   `delete_run` relies on `ON DELETE CASCADE` to remove records.
 - The runs list and run detail page are paginated (100 rows per page).
@@ -198,6 +212,7 @@ Backend:
 - `tauri` — desktop app shell and command bridge (`test` feature in dev-dependencies for `mock_app` tests)
 - `tauri-plugin-store` — persisted settings (`settings.json`), used from Rust only
 - `rayon` — parallel record analysis
+- `tokio` (`sync`) — bounded queue between the analysis thread and the inserts in `create_run_from_file`
 
 Frontend:
 

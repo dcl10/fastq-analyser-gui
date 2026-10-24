@@ -23,7 +23,9 @@ pub fn analyse_fasta_sequences(sequences: &str) -> Result<Vec<FastaSeqResult>, S
 pub fn analyse_fasta_file(path: &std::path::Path) -> Result<Vec<FastaSeqResult>, String> {
     let reader = read_fasta_streaming(path, DEFAULT_READ_CAPACITY).map_err(|e| e.to_string())?;
     analyse_fasta_reader(reader, BATCH_SIZE)
-}#[cfg(test)]
+}
+
+#[cfg(test)]
 mod tests {
     use flate2::write::GzEncoder;
     use flate2::Compression;
@@ -126,28 +128,35 @@ mod tests {
     #[test]
     fn test_analyse_fastq_file_zipped() {
         let file_name = format!("test_fastq_{}.fq.gz", Uuid::new_v4());
-        let unpacked_file_name = file_name.replace(".gz", "");
         let test_file_name = std::path::Path::new(&file_name);
-        let test_file_unpacked = std::path::Path::new(&unpacked_file_name);
         assert!(create_test_fqgz_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
-        assert!(!test_file_unpacked.exists());
         assert!(results.is_ok());
         assert_eq!(results.unwrap().len(), 20);
     }
 
     #[test]
-    fn test_fasta_file_zipped_as_fastq_removes_unpacked() {
+    fn test_fasta_file_zipped_as_fastq() {
         let file_name = format!("test_fasta_{}.fa.gz", Uuid::new_v4());
-        let unpacked_file_name = file_name.replace(".gz", "");
         let test_file_name = std::path::Path::new(&file_name);
-        let test_file_unpacked = std::path::Path::new(&unpacked_file_name);
         assert!(create_test_fagz_file(test_file_name).is_ok());
         let results = analyse_fastq_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
-        assert!(!test_file_unpacked.exists());
-        assert!(results.is_err());
+        let err = results.unwrap_err();
+        assert!(err.contains("expected '@'"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_analyse_fastq_file_missing() {
+        let file_name = format!("test_fastq_{}.fq", Uuid::new_v4());
+        assert!(analyse_fastq_file(std::path::Path::new(&file_name)).is_err());
+    }
+
+    #[test]
+    fn test_analyse_fasta_file_missing() {
+        let file_name = format!("test_fasta_{}.fa", Uuid::new_v4());
+        assert!(analyse_fasta_file(std::path::Path::new(&file_name)).is_err());
     }
 
     #[test]
@@ -241,14 +250,29 @@ mod tests {
     #[test]
     fn test_analyse_fasta_file_zipped() {
         let file_name = format!("test_fasta_{}.fa.gz", Uuid::new_v4());
-        let unpacked_file_name = file_name.replace(".gz", "");
         let test_file_name = std::path::Path::new(&file_name);
-        let test_file_unpacked = std::path::Path::new(&unpacked_file_name);
         assert!(create_test_fagz_file(test_file_name).is_ok());
         let results = analyse_fasta_file(test_file_name);
         assert!(remove_test_file(test_file_name).is_ok());
-        assert!(!test_file_unpacked.exists());
         assert!(results.is_ok());
         assert_eq!(results.unwrap().len(), 20);
+    }
+
+    // Peak-memory benchmarks for large files. Run with:
+    // BENCH_FILE=<path> cargo test --release bench_analyse_fasta_file -- --ignored --exact
+    #[test]
+    #[ignore]
+    fn bench_analyse_fasta_file() {
+        let path = std::env::var("BENCH_FILE").expect("set BENCH_FILE to a FASTA file");
+        let results = analyse_fasta_file(std::path::Path::new(&path)).unwrap();
+        println!("analysed {} records", results.len());
+    }
+
+    #[test]
+    #[ignore]
+    fn bench_analyse_fastq_file() {
+        let path = std::env::var("BENCH_FILE").expect("set BENCH_FILE to a FASTQ file");
+        let results = analyse_fastq_file(std::path::Path::new(&path)).unwrap();
+        println!("analysed {} records", results.len());
     }
 }

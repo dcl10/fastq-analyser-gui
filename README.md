@@ -18,3 +18,10 @@ While developing, `npm run tauri dev` runs the app with hot reload.
 
 ## How to use
 Copy and paste one or many FASTA/FastQ records into the text area, or select a FASTA/FastQ file (optionally gzip-compressed) and click "Submit". The results for each record will then appear on the screen.
+
+Accepted file extensions:
+
+- FASTA: `.fa`, `.fna`, `.fasta`
+- FASTQ: `.fq`, `.fastq`
+
+Any of these may also be gzip-compressed with a trailing `.gz` (e.g. `reads.fq.gz`).

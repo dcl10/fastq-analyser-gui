@@ -92,7 +92,8 @@ src-tauri/src/
 │                              #   count_run_pages / delete_run
 │   └── settings.rs            # tauri commands: get_thread_settings / save_thread_settings (persist, then restart)
 ├── data/
-│   ├── db.rs                  # init_db — SQLite pool (WAL, foreign keys on) + runs migrations
+│   ├── db.rs                  # init_db — SQLite pool (WAL, foreign keys on) + runs migrations; the DB file is
+│   │                          #   fastq-analyser-db.sqlite in app_data_dir()
 │   └── entities.rs            # Run / Record / ResultType row types (sqlx::FromRow)
 ├── options/
 │   ├── pagination.rs          # Pagination { page_size } (default 100) — limit_offset(page), total_pages(total)

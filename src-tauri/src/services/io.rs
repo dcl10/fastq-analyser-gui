@@ -1,37 +1,124 @@
 use bio::io::{fasta, fastq};
 use flate2::read::GzDecoder;
 use std::fs::File;
-use std::io::{BufReader, Read, Write};
+use std::io::{self, BufReader, Read};
 use std::path::Path;
 
-pub fn read_fasta(path: &Path) -> fasta::Reader<BufReader<File>> {
-    let path_str = path.as_os_str().to_str().unwrap();
-    if path_str.ends_with(".gz") {
-        let extracted_gz_path = extract_gzip(path);
-        fasta::Reader::from_file(extracted_gz_path).unwrap()
+/// Size of the buffer between the file (or gzip decoder) and the record parser.
+pub const DEFAULT_READ_CAPACITY: usize = 64 * 1024;
+
+/// Opens `path` for reading, decompressing on the fly if it ends in `.gz`.
+fn open_maybe_gz(path: &Path) -> io::Result<Box<dyn Read>> {
+    let file = File::open(path)?;
+    if path.extension().is_some_and(|ext| ext == "gz") {
+        Ok(Box::new(GzDecoder::new(file)))
     } else {
-        fasta::Reader::from_file(path).unwrap()
+        Ok(Box::new(file))
     }
 }
 
-pub fn read_fastq(path: &Path) -> fastq::Reader<BufReader<File>> {
-    let path_str = path.as_os_str().to_str().unwrap();
-    if path_str.ends_with(".gz") {
-        let extracted_gz_path = extract_gzip(path);
-        fastq::Reader::from_file(extracted_gz_path).unwrap()
-    } else {
-        fastq::Reader::from_file(path).unwrap()
-    }
+pub fn read_fasta_streaming(
+    path: &Path,
+    capacity: usize,
+) -> io::Result<fasta::Reader<BufReader<Box<dyn Read>>>> {
+    Ok(fasta::Reader::with_capacity(capacity, open_maybe_gz(path)?))
 }
 
-fn extract_gzip(path: &Path) -> String {
-    let gzip_file = File::open(path).unwrap();
-    let mut decoder = GzDecoder::new(gzip_file);
-    let mut buf_string = String::new();
-    let out_file_path = path.as_os_str().to_str().unwrap().replace(".gz", "");
-    let extracted_file = File::create(&out_file_path).unwrap();
-    decoder.read_to_string(&mut buf_string).unwrap();
-    let mut file_buffer = std::io::BufWriter::new(extracted_file);
-    file_buffer.write_all(buf_string.as_bytes()).unwrap();
-    out_file_path
+pub fn read_fastq_streaming(
+    path: &Path,
+    capacity: usize,
+) -> io::Result<fastq::Reader<BufReader<Box<dyn Read>>>> {
+    Ok(fastq::Reader::with_capacity(capacity, open_maybe_gz(path)?))
+}
+
+#[cfg(test)]
+mod tests {
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+    use std::path::Path;
+    use uuid::Uuid;
+
+    use super::{read_fasta_streaming, read_fastq_streaming, DEFAULT_READ_CAPACITY};
+
+    const FASTA: &str = ">id1 description\nATAT\n>id2\nGCGC\n";
+    const FASTQ: &str = "@id1 description\nATAT\n+\n!!!!\n@id2\nGCGC\n+\n!!!!\n";
+
+    fn write_file(path: &Path, contents: &str, gzip: bool) {
+        let file = std::fs::File::create(path).unwrap();
+        if gzip {
+            let mut encoder = GzEncoder::new(file, Compression::default());
+            encoder.write_all(contents.as_bytes()).unwrap();
+            encoder.finish().unwrap();
+        } else {
+            let mut file = file;
+            file.write_all(contents.as_bytes()).unwrap();
+        }
+    }
+
+    fn fasta_ids(path: &Path) -> Vec<String> {
+        read_fasta_streaming(path, DEFAULT_READ_CAPACITY)
+            .unwrap()
+            .records()
+            .map(|rec| rec.unwrap().id().to_owned())
+            .collect()
+    }
+
+    fn fastq_ids(path: &Path) -> Vec<String> {
+        read_fastq_streaming(path, DEFAULT_READ_CAPACITY)
+            .unwrap()
+            .records()
+            .map(|rec| rec.unwrap().id().to_owned())
+            .collect()
+    }
+
+    #[test]
+    fn test_read_fasta_streaming_plain_and_gz() {
+        let plain = format!("test_io_{}.fa", Uuid::new_v4());
+        let gz = format!("{plain}.gz");
+        write_file(Path::new(&plain), FASTA, false);
+        write_file(Path::new(&gz), FASTA, true);
+
+        let plain_ids = fasta_ids(Path::new(&plain));
+        let gz_ids = fasta_ids(Path::new(&gz));
+        std::fs::remove_file(&plain).unwrap();
+        std::fs::remove_file(&gz).unwrap();
+
+        assert_eq!(plain_ids, vec!["id1", "id2"]);
+        assert_eq!(gz_ids, plain_ids);
+    }
+
+    #[test]
+    fn test_read_fastq_streaming_plain_and_gz() {
+        let plain = format!("test_io_{}.fq", Uuid::new_v4());
+        let gz = format!("{plain}.gz");
+        write_file(Path::new(&plain), FASTQ, false);
+        write_file(Path::new(&gz), FASTQ, true);
+
+        let plain_ids = fastq_ids(Path::new(&plain));
+        let gz_ids = fastq_ids(Path::new(&gz));
+        std::fs::remove_file(&plain).unwrap();
+        std::fs::remove_file(&gz).unwrap();
+
+        assert_eq!(plain_ids, vec!["id1", "id2"]);
+        assert_eq!(gz_ids, plain_ids);
+    }
+
+    #[test]
+    fn test_read_gz_leaves_no_unpacked_file() {
+        let gz = format!("test_io_{}.fa.gz", Uuid::new_v4());
+        write_file(Path::new(&gz), FASTA, true);
+
+        let _ = fasta_ids(Path::new(&gz));
+        std::fs::remove_file(&gz).unwrap();
+
+        assert!(!Path::new(&gz.replace(".gz", "")).exists());
+    }
+
+    #[test]
+    fn test_read_streaming_missing_file() {
+        let missing = format!("test_io_{}.fa", Uuid::new_v4());
+        assert!(read_fasta_streaming(Path::new(&missing), DEFAULT_READ_CAPACITY).is_err());
+        assert!(read_fastq_streaming(Path::new(&missing), DEFAULT_READ_CAPACITY).is_err());
+    }
 }

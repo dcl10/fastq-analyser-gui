@@ -1,14 +1,21 @@
 use sqlx::{QueryBuilder, Sqlite, SqliteConnection, SqlitePool};
 
 use crate::data::entities::Record as RecordEntity;
-use crate::models::{FastaSeqResult, FastqSeqResult};
+use crate::models::{FastaSeqResult, FastqSeqResult, RunRecords};
+
+/// Inserts `records` for `run_id`, whichever format they are.
+pub async fn create_records(conn: &mut SqliteConnection, records: &RunRecords, run_id: u32) -> Result<(), sqlx::Error> {
+    match records {
+        RunRecords::FastaRecords(records) => create_records_from_fasta_results(conn, records, run_id).await,
+        RunRecords::FastqRecords(records) => create_records_from_fastq_results(conn, records, run_id).await,
+    }
+}
 
 pub async fn create_records_from_fastq_results(
     conn: &mut SqliteConnection,
-    records: &Vec<FastqSeqResult>,
+    records: &[FastqSeqResult],
     run_id: u32,
-) -> Result<Vec<u32>, sqlx::Error> {
-    let mut record_ids: Vec<u32> = Vec::new();
+) -> Result<(), sqlx::Error> {
     for chunk in records.chunks(1000) {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             "INSERT INTO records \
@@ -25,22 +32,17 @@ pub async fn create_records_from_fastq_results(
                 .push_bind(record.phred_score);
         });
 
-        builder.push(r#"RETURNING id"#);
-        let query = builder.build_query_scalar::<u32>();
-
-        let mut ids = query.fetch_all(&mut *conn).await?;
-        record_ids.append(&mut ids);
+        builder.build().execute(&mut *conn).await?;
     }
 
-    Ok(record_ids)
+    Ok(())
 }
 
 pub async fn create_records_from_fasta_results(
     conn: &mut SqliteConnection,
-    records: &Vec<FastaSeqResult>,
+    records: &[FastaSeqResult],
     run_id: u32,
-) -> Result<Vec<u32>, sqlx::Error> {
-    let mut record_ids: Vec<u32> = Vec::new();
+) -> Result<(), sqlx::Error> {
     for chunk in records.chunks(1000) {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             "INSERT INTO records \
@@ -56,14 +58,10 @@ pub async fn create_records_from_fasta_results(
                 .push_bind(record.seq_len);
         });
 
-        builder.push(r#"RETURNING id"#);
-        let query = builder.build_query_scalar::<u32>();
-
-        let mut ids = query.fetch_all(&mut *conn).await?;
-        record_ids.append(&mut ids);
+        builder.build().execute(&mut *conn).await?;
     }
 
-    Ok(record_ids)
+    Ok(())
 }
 
 pub async fn list_records_for_run<T>(pool: SqlitePool, run_id: u32, limit: u32, offset: u32) -> Result<Vec<T>, sqlx::Error>

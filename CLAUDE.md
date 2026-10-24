@@ -74,7 +74,8 @@ src-tauri/src/
 │                              #   pool, pagination options)
 ├── models.rs                  # FastqSeqResult / FastaSeqResult / Run / RunRecords (serde structs)
 ├── analysis/
-│   └── analysers.rs           # analyse_fastq_records / analyse_fasta_records — GC%, ORF count, Phred score
+│   └── analysers.rs           # analyse_*_reader (batches of BATCH_SIZE) / analyse_*_records — GC%, ORF count,
+│                              #   Phred score
 ├── commands/
 │   ├── analysis.rs            # tauri commands: *_sequences (raw text) and *_file (path) for both formats
 │   ├── record.rs              # tauri commands: list_records_for_run / count_record_pages
@@ -85,7 +86,7 @@ src-tauri/src/
 ├── options/
 │   └── pagination.rs          # Pagination { page_size } (default 100) — limit_offset(page), total_pages(total)
 └── services/
-    ├── io.rs                  # file readers (transparent .gz extraction)
+    ├── io.rs                  # streaming file readers (gzip decompressed on the fly)
     ├── run.rs                 # create_run / list_runs / count_runs / get_run_with_records / delete_run
     └── record.rs              # batch record inserts (per format) / list_records_for_run / count_records_for_run
 
@@ -106,8 +107,9 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
   `FastqRecords(Vec<...>)`). `data/entities.rs` holds the matching row types; services convert between the two with
   `From` impls so callers only see `models.rs` types.
 - Analysis commands (`commands/analysis.rs`): `analyse_fastq_sequences`, `analyse_fastq_file`,
-  `analyse_fasta_sequences`, `analyse_fasta_file`. The `_file` variants transparently gunzip `.gz` inputs and delete
-  the extracted copy afterwards. They're `#[tauri::command(async)]` so analysis runs off the main thread and doesn't
+  `analyse_fasta_sequences`, `analyse_fasta_file`. The `_file` variants stream the file, decompressing `.gz` inputs on
+  the fly (nothing is extracted to disk). All four parse and analyse records in batches of `BATCH_SIZE`
+  (`analysers.rs`) rather than loading every record first, though the returned `Vec` still holds every result. They're `#[tauri::command(async)]` so analysis runs off the main thread and doesn't
   freeze the window.
 - Run commands (`commands/run.rs`): `save_run` (returns the new run id), `load_run`, `list_runs`, `count_run_pages`,
   `delete_run`. Record commands (`commands/record.rs`): `list_records_for_run`, `count_record_pages`.
@@ -118,8 +120,8 @@ Next.js server actions/API routes/ISR; all app logic lives in Rust `#[tauri::com
 ## Current Capabilities
 
 - Both FASTA and FASTQ are supported end-to-end, from pasted text or a file, with transparent gzip decompression.
-- Record analysis is single-threaded — `analyse_fastq_records`/`analyse_fasta_records` loop over records
-  sequentially (tracked in an open issue for multithreaded analysis).
+- Record analysis is batched and parallel within each batch — `analyse_fastq_records`/`analyse_fasta_records` use
+  rayon's `par_iter` on the global thread pool (a configurable thread count is tracked in an open issue).
 - Runs persist to SQLite via `services::run`. `create_run` inserts the run and its records in a single transaction;
   `delete_run` relies on `ON DELETE CASCADE` to remove records.
 - The runs list and run detail page are paginated (100 rows per page).

@@ -1,74 +1,29 @@
-use crate::analysis::analysers::{analyse_fasta_records, analyse_fastq_records};
+use crate::analysis::analysers::{analyse_fasta_reader, analyse_fastq_reader, BATCH_SIZE};
 use crate::models::{FastaSeqResult, FastqSeqResult};
-use crate::services::io::{read_fasta, read_fastq};
+use crate::services::io::{read_fasta_streaming, read_fastq_streaming, DEFAULT_READ_CAPACITY};
 use bio::io::{fasta, fastq};
 
 #[tauri::command(async)]
 pub fn analyse_fastq_sequences(sequences: &str) -> Result<Vec<FastqSeqResult>, String> {
-    let reader = fastq::Reader::new(sequences.as_bytes());
-    let records: Vec<fastq::Record> = reader
-        .records()
-        .enumerate()
-        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
-        .collect::<Result<_, _>>()?;
-
-    analyse_fastq_records(&records)
+    analyse_fastq_reader(fastq::Reader::new(sequences.as_bytes()), BATCH_SIZE)
 }
 
 #[tauri::command(async)]
 pub fn analyse_fastq_file(path: &std::path::Path) -> Result<Vec<FastqSeqResult>, String> {
-    let reader = read_fastq(path);
-    let records: Result<Vec<fastq::Record>, String> = reader
-        .records()
-        .enumerate()
-        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
-        .collect::<Result<_, _>>();
-
-    let path_str = path.to_str().unwrap();
-    if path_str.ends_with(".gz") {
-        let unpacked = path_str.replace(".gz", "");
-        match std::fs::remove_file(unpacked) {
-            Ok(_) => (),
-            Err(_) => (),
-        }
-    }
-    analyse_fastq_records(&records?)
+    let reader = read_fastq_streaming(path, DEFAULT_READ_CAPACITY).map_err(|e| e.to_string())?;
+    analyse_fastq_reader(reader, BATCH_SIZE)
 }
 
 #[tauri::command(async)]
 pub fn analyse_fasta_sequences(sequences: &str) -> Result<Vec<FastaSeqResult>, String> {
-    let reader = fasta::Reader::new(sequences.as_bytes());
-    let records: Vec<fasta::Record> = reader
-        .records()
-        .enumerate()
-        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
-        .collect::<Result<_, _>>()?;
-
-    analyse_fasta_records(&records)
+    analyse_fasta_reader(fasta::Reader::new(sequences.as_bytes()), BATCH_SIZE)
 }
 
 #[tauri::command(async)]
 pub fn analyse_fasta_file(path: &std::path::Path) -> Result<Vec<FastaSeqResult>, String> {
-    let reader = read_fasta(path);
-    let records: Result<Vec<fasta::Record>, String> = reader
-        .records()
-        .enumerate()
-        .map(|(i, rec)| rec.map_err(|e| format!("Record {}: {e}", i + 1)))
-        .collect::<Result<_, _>>();
-
-    let path_str = path.to_str().unwrap();
-    if path_str.ends_with(".gz") {
-        let unpacked = path_str.replace(".gz", "");
-        match std::fs::remove_file(unpacked) {
-            Ok(_) => (),
-            Err(_) => (),
-        }
-    }
-
-    analyse_fasta_records(&records?)
-}
-
-#[cfg(test)]
+    let reader = read_fasta_streaming(path, DEFAULT_READ_CAPACITY).map_err(|e| e.to_string())?;
+    analyse_fasta_reader(reader, BATCH_SIZE)
+}#[cfg(test)]
 mod tests {
     use flate2::write::GzEncoder;
     use flate2::Compression;

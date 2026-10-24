@@ -5,7 +5,7 @@ use tauri::{AppHandle, Manager};
 pub async fn init_db(app: &AppHandle) -> Result<SqlitePool, sqlx::Error> {
     let data_dir = app
         .path()
-        .data_dir()
+        .app_data_dir()
         .expect("Couldn't get app data directory");
 
     std::fs::create_dir_all(&data_dir).expect("Failed to create data directory");

@@ -36,6 +36,8 @@ impl From<RunModel> for Run {
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Record {
+    // Mirrors records.id so rows read from the database are complete, though nothing reads it yet
+    #[allow(dead_code)]
     pub id: u32,
     pub seq_id: String,
     pub description: Option<String>,

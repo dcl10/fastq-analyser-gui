@@ -20,6 +20,18 @@ import { analyseFileSequences, analyseTextSequences } from "@/lib/analysis";
 import { saveRun } from "@/lib/runs";
 import type { SeqFormat } from "@/types/results";
 
+// File extensions accepted for each format, each also allowed with a trailing .gz
+const SEQ_EXTENSIONS: Record<SeqFormat, string[]> = {
+  fastq: ["fq", "fastq"],
+  fasta: ["fa", "fna", "fasta"],
+};
+
+// Whether the path ends in one of the extensions, optionally followed by .gz
+function hasSeqExtension(path: string, extensions: string[]) {
+  const name = path.toLowerCase().replace(/\.gz$/, "");
+  return extensions.some((ext) => name.endsWith(`.${ext}`));
+}
+
 export function FastqAnalyserApp() {
   const router = useRouter();
   const textSequences = useRef("");
@@ -36,25 +48,38 @@ export function FastqAnalyserApp() {
 
   // Change the file sequences in state
   const handleFileInput = async () => {
-    const extensions =
-      seqFormat === "fastq" ? ["fq", "fastq"] : ["fa", "fna", "fasta"];
+    const extensions = SEQ_EXTENSIONS[seqFormat];
+    // macOS's picker only matches a file's last extension, so "fq.gz" can't be
+    // a filter there; allow any .gz and check the full suffix once picked.
     const selected = await open({
       directory: false,
       multiple: false,
       filters: [
         {
           name: "Sequence files",
-          extensions,
+          extensions: [...extensions, "gz"],
         },
       ],
     });
+    if (!selected) return;
 
+    if (!hasSeqExtension(selected, extensions)) {
+      clearFile();
+      setError(
+        `Please choose a ${seqFormat.toUpperCase()} file ending in ${extensions
+          .map((ext) => `.${ext}`)
+          .join(", ")} (optionally followed by .gz).`,
+      );
+      return;
+    }
+
+    setError("");
     const fileInputEl = document.getElementById(
       "file-input",
     ) as HTMLInputElement | null;
-    if (fileInputEl) fileInputEl.value = selected ?? "";
-    fileSequences.current = selected ?? "";
-    setFilePath(selected ?? "");
+    if (fileInputEl) fileInputEl.value = selected;
+    fileSequences.current = selected;
+    setFilePath(selected);
   };
 
   // Clear the selected file

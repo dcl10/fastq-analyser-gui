@@ -97,23 +97,25 @@ export function SettingsDialog() {
               <Switch checked={isAuto} onCheckedChange={setIsAuto} disabled={isSaving} />
               Auto ({pluralise(saved.max_threads, "thread")})
             </Label>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="thread-count">Analysis threads</Label>
-              <Input
-                id="thread-count"
-                type="number"
-                min={1}
-                max={saved.max_threads}
-                step={1}
-                value={threadCount}
-                onChange={(e) => setThreadCount(e.target.value)}
-                disabled={isAuto || isSaving}
-                aria-invalid={!isValid}
-              />
-              <p className="text-xs text-muted-foreground">
-                Between 1 and {saved.max_threads}, the number of cores on this machine.
-              </p>
-            </div>
+            {isAuto ? null : (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="thread-count">Analysis threads</Label>
+                <Input
+                  id="thread-count"
+                  type="number"
+                  min={1}
+                  max={saved.max_threads}
+                  step={1}
+                  value={threadCount}
+                  onChange={(e) => setThreadCount(e.target.value)}
+                  disabled={isSaving}
+                  aria-invalid={!isValid}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Between 1 and {saved.max_threads}, the number of cores on this machine.
+                </p>
+              </div>
+            )}
             {error ? (
               <p role="alert" className="text-sm text-destructive">
                 {error}

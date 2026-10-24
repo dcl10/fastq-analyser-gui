@@ -127,9 +127,69 @@ fn calc_phred_score(qual: &[u8]) -> u32 {
         score += q_32bit - 33;
     }
     score
-}#[cfg(test)]
+}
+
+#[cfg(test)]
 mod tests {
-    use super::calc_phred_score;
+    use bio::io::{fasta, fastq};
+
+    use super::{analyse_fasta_reader, analyse_fastq_reader, calc_phred_score};
+
+    fn fasta_input(n: usize) -> String {
+        (1..=n).map(|i| format!(">id{i}\nATGC\n")).collect()
+    }
+
+    fn fastq_input(n: usize) -> String {
+        (1..=n).map(|i| format!("@id{i}\nATGC\n+\n!!!!\n")).collect()
+    }
+
+    #[test]
+    fn test_analyse_fasta_reader_across_batches() {
+        let input = fasta_input(10);
+        let results = analyse_fasta_reader(fasta::Reader::new(input.as_bytes()), 3).unwrap();
+
+        let ids: Vec<String> = results.into_iter().map(|r| r.id).collect();
+        let expected: Vec<String> = (1..=10).map(|i| format!("id{i}")).collect();
+        assert_eq!(ids, expected);
+    }
+
+    #[test]
+    fn test_analyse_fastq_reader_across_batches() {
+        let input = fastq_input(10);
+        let results = analyse_fastq_reader(fastq::Reader::new(input.as_bytes()), 3).unwrap();
+
+        let ids: Vec<String> = results.into_iter().map(|r| r.id).collect();
+        let expected: Vec<String> = (1..=10).map(|i| format!("id{i}")).collect();
+        assert_eq!(ids, expected);
+    }
+
+    #[test]
+    fn test_analyse_fasta_reader_error_in_later_batch() {
+        // Record 8 has an invalid character, so it fails validation in the third batch of 3.
+        let mut input = fasta_input(7);
+        input.push_str(">bad\nAT GC\n");
+        input.push_str(&fasta_input(2));
+
+        let err = analyse_fasta_reader(fasta::Reader::new(input.as_bytes()), 3).unwrap_err();
+        assert!(err.starts_with("Record 8 (bad)"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_analyse_fastq_reader_error_in_later_batch() {
+        // Record 8's quality is shorter than its sequence, so it fails validation in the third batch of 3.
+        let mut input = fastq_input(7);
+        input.push_str("@bad\nATGC\n+\n!!\n");
+        input.push_str(&fastq_input(2));
+
+        let err = analyse_fastq_reader(fastq::Reader::new(input.as_bytes()), 3).unwrap_err();
+        assert!(err.starts_with("Record 8 (bad)"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn test_analyse_reader_empty_input() {
+        assert!(analyse_fasta_reader(fasta::Reader::new(&b""[..]), 3).unwrap().is_empty());
+        assert!(analyse_fastq_reader(fastq::Reader::new(&b""[..]), 3).unwrap().is_empty());
+    }
 
     #[test]
     fn test_calc_phred_score() {
